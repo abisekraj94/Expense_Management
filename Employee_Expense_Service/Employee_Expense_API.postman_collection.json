@@ -1,0 +1,180 @@
+{
+	"info": {
+		"name": "Employee Expense Service API",
+		"description": "API collection for Employee Expense Service microservice",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "jwtToken",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Employee Operations",
+			"item": [
+				{
+					"name": "Create Expense",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwtToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"employeeId\": 1001,\n  \"expenseCategoryId\": 1,\n  \"currency\": \"USD\",\n  \"amount\": 500.00,\n  \"description\": \"Laptop purchase for development work\",\n  \"dateOfExpense\": \"2024-01-15\",\n  \"documents\": [\"receipt.pdf\", \"invoice.pdf\"]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/employee/create-expense",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "employee", "create-expense"]
+						}
+					}
+				},
+				{
+					"name": "Update Expense",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwtToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"employeeId\": 1001,\n  \"expenseCategoryId\": 1,\n  \"currency\": \"USD\",\n  \"amount\": 600.00,\n  \"description\": \"Updated laptop purchase description\",\n  \"dateOfExpense\": \"2024-01-15\",\n  \"documents\": [\"updated_receipt.pdf\"]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/employee/update-expense/1?employeeId=1001",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "employee", "update-expense", "1"],
+							"query": [
+								{
+									"key": "employeeId",
+									"value": "1001"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Expense",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwtToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/employee/delete-expense/1?employeeId=1001",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "employee", "delete-expense", "1"],
+							"query": [
+								{
+									"key": "employeeId",
+									"value": "1001"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Admin Operations",
+			"item": [
+				{
+					"name": "Get Expenses by Employee ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwtToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/admin/get/1001",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "admin", "get", "1001"]
+						}
+					}
+				},
+				{
+					"name": "Update Expense Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwtToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"Approved\",\n  \"reviewedBy\": 2001\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/admin/update-expense/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "admin", "update-expense", "1"]
+						}
+					}
+				},
+				{
+					"name": "Delete Expense (Admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwtToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/admin/delete-expense/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "admin", "delete-expense", "1"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Health Check",
+			"request": {
+				"method": "GET",
+				"url": {
+					"raw": "{{baseUrl}}/actuator/health",
+					"host": ["{{baseUrl}}"],
+					"path": ["actuator", "health"]
+				}
+			}
+		}
+	]
+}

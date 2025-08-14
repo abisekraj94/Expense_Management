@@ -1,0 +1,55 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: employee-expense-service
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5432/Exp_Reimburse
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:abisek}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password:
+    timeout: 2000ms
+
+
+
+# External API Configuration
+currency:
+  api:
+    url: https://open.er-api.com/v6/latest
+    timeout: 5000
+
+# Logging Configuration
+logging:
+  level:
+    com.expense.service: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/expense-service.log
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
