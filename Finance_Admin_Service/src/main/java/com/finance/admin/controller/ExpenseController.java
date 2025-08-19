@@ -9,7 +9,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -37,12 +36,12 @@ public class ExpenseController {
      * @return page of pending expenses
      */
     @GetMapping("/pending")
-    public ResponseEntity<Page<ExpenseDto>> getPendingExpenses(
+    public ResponseEntity<Page<Expense>> getPendingExpenses(
             @PageableDefault(size = 10) Pageable pageable) {
         
         log.info("Fetching pending expenses with pagination: {}", pageable);
         
-        Page<ExpenseDto> expenses = expenseService.getPendingExpenses(pageable);
+        Page<Expense> expenses = expenseService.getPendingExpenses(pageable);
         
         log.info("Retrieved {} pending expenses", expenses.getNumberOfElements());
         return ResponseEntity.ok(expenses);
@@ -55,10 +54,10 @@ public class ExpenseController {
      * @return expense details
      */
     @GetMapping("/{expenseId}")
-    public ResponseEntity<ExpenseDto> getExpenseById(@PathVariable Long expenseId) {
+    public ResponseEntity<Expense> getExpenseById(@PathVariable Long expenseId) {
         log.info("Fetching expense with ID: {}", expenseId);
         
-        ExpenseDto expense = expenseService.getExpenseById(expenseId);
+        Expense expense = expenseService.getExpenseById(expenseId);
         
         return ResponseEntity.ok(expense);
     }
@@ -67,21 +66,17 @@ public class ExpenseController {
      * Approve an expense
      * 
      * @param approvalRequest approval request details
-     * @param authentication  current user authentication
      * @return updated expense
      */
     @PostMapping("/approve")
-    public ResponseEntity<ExpenseDto> approveExpense(
-            @Valid @RequestBody ApprovalRequestDto approvalRequest,
-            Authentication authentication) {
+    public ResponseEntity<Expense> approveExpense(
+            @Valid @RequestBody ApprovalRequest approvalRequest) {
         
-        log.info("Approving expense with ID: {} by user: {}", 
-                approvalRequest.getExpenseId(), authentication.getName());
+        log.info("Approving expense with ID: {}", approvalRequest.getExpenseId());
         
-        // Set the approver from authentication
-        approvalRequest.setApprovedBy(authentication.getName());
+        approvalRequest.setApprovedBy("admin");
         
-        ExpenseDto expense = expenseService.approveExpense(approvalRequest);
+        Expense expense = expenseService.approveExpense(approvalRequest);
         
         log.info("Expense approved successfully: {}", expense.getExpenseId());
         return ResponseEntity.ok(expense);
@@ -91,21 +86,17 @@ public class ExpenseController {
      * Reject an expense with reason
      * 
      * @param rejectionRequest rejection request details
-     * @param authentication   current user authentication
      * @return updated expense
      */
     @PostMapping("/reject")
-    public ResponseEntity<ExpenseDto> rejectExpense(
-            @Valid @RequestBody RejectionRequestDto rejectionRequest,
-            Authentication authentication) {
+    public ResponseEntity<Expense> rejectExpense(
+            @Valid @RequestBody RejectionRequest rejectionRequest) {
         
-        log.info("Rejecting expense with ID: {} by user: {}", 
-                rejectionRequest.getExpenseId(), authentication.getName());
+        log.info("Rejecting expense with ID: {}", rejectionRequest.getExpenseId());
         
-        // Set the rejector from authentication
-        rejectionRequest.setRejectedBy(authentication.getName());
+        rejectionRequest.setRejectedBy("admin");
         
-        ExpenseDto expense = expenseService.rejectExpense(rejectionRequest);
+        Expense expense = expenseService.rejectExpense(rejectionRequest);
         
         log.info("Expense rejected successfully: {}", expense.getExpenseId());
         return ResponseEntity.ok(expense);
@@ -117,10 +108,10 @@ public class ExpenseController {
      * @return list of currency totals
      */
     @GetMapping("/totals/currency")
-    public ResponseEntity<List<ExpenseReportDto.CurrencyTotalDto>> getTotalApprovedAmountByCurrency() {
+    public ResponseEntity<List<ExpenseReport.CurrencyTotalDto>> getTotalApprovedAmountByCurrency() {
         log.info("Fetching total approved amount by currency");
         
-        List<ExpenseReportDto.CurrencyTotalDto> totals = expenseService.getTotalApprovedAmountByCurrency();
+        List<ExpenseReport.CurrencyTotalDto> totals = expenseService.getTotalApprovedAmountByCurrency();
         
         return ResponseEntity.ok(totals);
     }
@@ -146,10 +137,10 @@ public class ExpenseController {
      * @return synced expense
      */
     @PostMapping("/{expenseId}/sync")
-    public ResponseEntity<ExpenseDto> syncExpenseFromEmployeeService(@PathVariable Long expenseId) {
+    public ResponseEntity<Expense> syncExpenseFromEmployeeService(@PathVariable Long expenseId) {
         log.info("Syncing expense from Employee Service: {}", expenseId);
         
-        ExpenseDto expense = expenseService.syncExpenseFromEmployeeService(expenseId);
+        Expense expense = expenseService.syncExpenseFromEmployeeService(expenseId);
         
         return ResponseEntity.ok(expense);
     }

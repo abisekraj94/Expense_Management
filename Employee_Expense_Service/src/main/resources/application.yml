@@ -6,7 +6,7 @@ spring:
     name: employee-expense-service
   
   datasource:
-    url: jdbc:postgresql://localhost:5432/Exp_Reimburse
+    url: jdbc:postgresql://localhost:5432/Expense_Reimburse
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:abisek}
     driver-class-name: org.postgresql.Driver
@@ -25,6 +25,12 @@ spring:
     port: ${REDIS_PORT:6379}
     password:
     timeout: 2000ms
+  
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
 
 
 

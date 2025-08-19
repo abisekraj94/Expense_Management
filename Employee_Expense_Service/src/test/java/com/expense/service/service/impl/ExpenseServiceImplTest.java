@@ -1,10 +1,11 @@
 package com.expense.service.service.impl;
 
 import com.expense.service.constants.ApplicationConstants;
-import com.expense.service.dto.ExpenseRequestDto;
-import com.expense.service.dto.ExpenseResponseDto;
+import com.expense.service.dto.ExpenseRequest;
+import com.expense.service.dto.ExpenseResponse;
 import com.expense.service.entity.EmployeeExpense;
 import com.expense.service.entity.ExpenseCategory;
+import com.expense.service.exception.GlobalExceptionHandler;
 import com.expense.service.exception.GlobalExceptionHandler.ExpenseNotFoundException;
 import com.expense.service.repository.EmployeeExpenseDocRepository;
 import com.expense.service.repository.EmployeeExpenseRepository;
@@ -54,13 +55,13 @@ class ExpenseServiceImplTest {
     @InjectMocks
     private ExpenseServiceImpl expenseService;
 
-    private ExpenseRequestDto expenseRequestDto;
+    private ExpenseRequest expenseRequestDto;
     private ExpenseCategory expenseCategory;
     private EmployeeExpense employeeExpense;
 
     @BeforeEach
     void setUp() {
-        expenseRequestDto = new ExpenseRequestDto();
+        expenseRequestDto = new ExpenseRequest();
         expenseRequestDto.setEmployeeId(1L);
         expenseRequestDto.setExpenseCategoryId(1L);
         expenseRequestDto.setCurrency("USD");
@@ -79,7 +80,7 @@ class ExpenseServiceImplTest {
         employeeExpense.setExpenseCategory(expenseCategory);
         employeeExpense.setCurrency("USD");
         employeeExpense.setAmount(new BigDecimal("100.00"));
-        employeeExpense.setAmountInr(new BigDecimal("8300.00"));
+        employeeExpense.setAmountInr(new BigDecimal("800.00"));
         employeeExpense.setDescription("Test expense");
         employeeExpense.setStatus("Requested");
         
@@ -91,16 +92,14 @@ class ExpenseServiceImplTest {
     }
 
     @Test
-    void createExpense_Success() {
+    void createExpense_Success() throws GlobalExceptionHandler.CurrencyConversionException, GlobalExceptionHandler.ExpenseCategoryNotFoundException, GlobalExceptionHandler.BusinessRuleViolationException {
         // Arrange
         when(categoryRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(expenseCategory));
-        when(currencyService.convertCurrency(any(), eq("USD"), eq("INR"))).thenReturn(new BigDecimal("8300.00"));
-        when(modelMapper.map(any(ExpenseRequestDto.class), eq(EmployeeExpense.class))).thenReturn(employeeExpense);
+        when(currencyService.convertCurrency(any(), eq("USD"), eq("INR"))).thenReturn(new BigDecimal("800.00"));
         when(expenseRepository.save(any(EmployeeExpense.class))).thenReturn(employeeExpense);
-        when(modelMapper.map(any(EmployeeExpense.class), eq(ExpenseResponseDto.class))).thenReturn(new ExpenseResponseDto());
 
         // Act
-        ExpenseResponseDto result = expenseService.createExpense(expenseRequestDto);
+        ExpenseResponse result = expenseService.createExpense(expenseRequestDto);
 
         // Assert
         assertNotNull(result);
@@ -115,7 +114,7 @@ class ExpenseServiceImplTest {
         when(categoryRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.empty());
 
         // Act & Assert
-        ExpenseNotFoundException exception = assertThrows(ExpenseNotFoundException.class, 
+        GlobalExceptionHandler.ExpenseCategoryNotFoundException exception = assertThrows(GlobalExceptionHandler.ExpenseCategoryNotFoundException.class, 
             () -> expenseService.createExpense(expenseRequestDto));
         
         assertEquals("Expense category not found", exception.getMessage());
@@ -125,13 +124,12 @@ class ExpenseServiceImplTest {
     }
 
     @Test
-    void getExpenseById_Success() {
+    void getExpenseById_Success() throws ExpenseNotFoundException {
         // Arrange
         when(expenseRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(employeeExpense));
-        when(modelMapper.map(any(EmployeeExpense.class), eq(ExpenseResponseDto.class))).thenReturn(new ExpenseResponseDto());
 
         // Act
-        ExpenseResponseDto result = expenseService.getExpenseById(1L);
+        ExpenseResponse result = expenseService.getExpenseById(1L);
 
         // Assert
         assertNotNull(result);

@@ -1,0 +1,729 @@
+{
+  "info": {
+    "name": "Finance Admin Service - Complete API Tests",
+    "description": "Comprehensive API testing collection with automated validations",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8082/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_expense_id",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Health & Setup Tests",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Health check returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Application is UP', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.status).to.eql('UP');",
+                  "});",
+                  "",
+                  "pm.test('Response time is acceptable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(3000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actuator/health",
+              "host": ["{{base_url}}"],
+              "path": ["actuator", "health"]
+            }
+          }
+        },
+        {
+          "name": "Application Info",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Info endpoint returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actuator/info",
+              "host": ["{{base_url}}"],
+              "path": ["actuator", "info"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Authentication Tests",
+      "item": [
+        {
+          "name": "Valid Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login successful', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('JWT token received', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.accessToken).to.not.be.empty;",
+                  "    pm.collectionVariables.set('jwt_token', response.accessToken);",
+                  "});",
+                  "",
+                  "pm.test('Admin details present', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.admin).to.have.property('username');",
+                  "    pm.expect(response.admin).to.have.property('role');",
+                  "    pm.expect(response.admin.role).to.eql('FINANCE_ADMIN');",
+                  "});",
+                  "",
+                  "pm.test('Token type is Bearer', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.tokenType).to.eql('Bearer');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"username\\\": \\\"admin\\\",\\n  \\\"password\\\": \\\"password\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Invalid Login Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Invalid login returns 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('No token in response', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.not.have.property('accessToken');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"username\\\": \\\"invalid\\\",\\n  \\\"password\\\": \\\"wrong\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Expense Management Tests",
+      "item": [
+        {
+          "name": "Get Pending Expenses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Pending expenses retrieved successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has pagination structure', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('content');",
+                  "    pm.expect(response).to.have.property('pageable');",
+                  "    pm.expect(response).to.have.property('totalElements');",
+                  "});",
+                  "",
+                  "pm.test('Content is array', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.content).to.be.an('array');",
+                  "});",
+                  "",
+                  "// Store first expense ID for later tests",
+                  "if (pm.response.json().content.length > 0) {",
+                  "    pm.collectionVariables.set('test_expense_id', pm.response.json().content[0].expenseId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/expenses/pending?page=0&size=10",
+              "host": ["{{base_url}}"],
+              "path": ["expenses", "pending"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Specific Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Expense retrieved successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Expense has required fields', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('expenseId');",
+                  "    pm.expect(response).to.have.property('amount');",
+                  "    pm.expect(response).to.have.property('currency');",
+                  "    pm.expect(response).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/expenses/{{test_expense_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["expenses", "{{test_expense_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Currency Totals",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Currency totals retrieved successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is array', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Currency totals have required structure', function () {",
+                  "    const response = pm.response.json();",
+                  "    if (response.length > 0) {",
+                  "        pm.expect(response[0]).to.have.property('currency');",
+                  "        pm.expect(response[0]).to.have.property('totalAmount');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/expenses/totals/currency",
+              "host": ["{{base_url}}"],
+              "path": ["expenses", "totals", "currency"]
+            }
+          }
+        },
+        {
+          "name": "Get INR Total",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('INR total retrieved successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is numeric', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.be.a('number');",
+                  "});",
+                  "",
+                  "pm.test('INR total is non-negative', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.be.at.least(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/expenses/totals/inr",
+              "host": ["{{base_url}}"],
+              "path": ["expenses", "totals", "inr"]
+            }
+          }
+        },
+        {
+          "name": "Approve Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Expense approved successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Expense status is APPROVED', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.status).to.eql('APPROVED');",
+                  "});",
+                  "",
+                  "pm.test('Approval details present', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('approvedBy');",
+                  "    pm.expect(response).to.have.property('approvedDate');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"expenseId\\\": {{test_expense_id}}\\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/expenses/approve",
+              "host": ["{{base_url}}"],
+              "path": ["expenses", "approve"]
+            }
+          }
+        },
+        {
+          "name": "Reject Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Expense rejected successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Expense status is REJECTED', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.status).to.eql('REJECTED');",
+                  "});",
+                  "",
+                  "pm.test('Rejection details present', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('rejectedBy');",
+                  "    pm.expect(response).to.have.property('rejectedDate');",
+                  "    pm.expect(response).to.have.property('rejectionReason');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"expenseId\\\": 3,\\n  \\\"rejectionReason\\\": \\\"Test rejection for API testing\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/expenses/reject",
+              "host": ["{{base_url}}"],
+              "path": ["expenses", "reject"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Reports Tests",
+      "item": [
+        {
+          "name": "Multi-Employee Report",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Report generated successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Report has pagination structure', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('content');",
+                  "    pm.expect(response).to.have.property('pageable');",
+                  "});",
+                  "",
+                  "pm.test('Report content is array', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.content).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reports/expenses?employeeIds=1,2,3&startDate=2024-01-01&endDate=2024-01-31&page=0&size=5",
+              "host": ["{{base_url}}"],
+              "path": ["reports", "expenses"],
+              "query": [
+                {
+                  "key": "employeeIds",
+                  "value": "1,2,3"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-01-31"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "5"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Employee-Specific Report",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Employee report generated successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Report structure is correct', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('content');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reports/expenses/employee/1?startDate=2024-01-01&endDate=2024-01-31",
+              "host": ["{{base_url}}"],
+              "path": ["reports", "expenses", "employee", "1"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-01-31"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Error Handling Tests",
+      "item": [
+        {
+          "name": "Unauthorized Access",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Unauthorized access returns 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/expenses/pending",
+              "host": ["{{base_url}}"],
+              "path": ["expenses", "pending"]
+            }
+          }
+        },
+        {
+          "name": "Invalid Expense ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Invalid expense ID returns 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/expenses/999999",
+              "host": ["{{base_url}}"],
+              "path": ["expenses", "999999"]
+            }
+          }
+        },
+        {
+          "name": "Invalid Approval Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Invalid request returns 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Validation error message present', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"expenseId\\\": null\\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/expenses/approve",
+              "host": ["{{base_url}}"],
+              "path": ["expenses", "approve"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Performance Tests",
+      "item": [
+        {
+          "name": "Response Time Test - Pending Expenses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Response time is acceptable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(3000);",
+                  "});",
+                  "",
+                  "pm.test('Request successful', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/expenses/pending?page=0&size=50",
+              "host": ["{{base_url}}"],
+              "path": ["expenses", "pending"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Response Time Test - Reports",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Report generation time is acceptable', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});",
+                  "",
+                  "pm.test('Report generated successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reports/expenses?page=0&size=10",
+              "host": ["{{base_url}}"],
+              "path": ["reports", "expenses"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

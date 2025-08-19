@@ -1,10 +1,14 @@
 package com.expense.service.controller;
 
 import com.expense.service.constants.ApplicationConstants;
-import com.expense.service.dto.ApiResponseDto;
-import com.expense.service.dto.ExpenseResponseDto;
-import com.expense.service.dto.ExpenseUpdateDto;
+import com.expense.service.dto.ApiResponse;
+import com.expense.service.dto.CategoryRequest;
+import com.expense.service.dto.ExpenseResponse;
+import com.expense.service.dto.ExpenseUpdate;
+import com.expense.service.entity.ExpenseCategory;
+import com.expense.service.service.CategoryService;
 import com.expense.service.service.ExpenseService;
+import com.expense.service.exception.GlobalExceptionHandler.ExpenseNotFoundException;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -22,17 +26,41 @@ import java.util.List;
 public class AdminExpenseController {
 
     private final ExpenseService expenseService;
+    private final CategoryService categoryService;
     private final ApplicationConstants constants;
 
     /**
      * Constructor for AdminExpenseController
      * 
      * @param expenseService Service for expense operations
+     * @param categoryService Service for category operations
      * @param constants Application constants for messages
      */
-    public AdminExpenseController(ExpenseService expenseService, ApplicationConstants constants) {
+    public AdminExpenseController(ExpenseService expenseService, CategoryService categoryService, ApplicationConstants constants) {
         this.expenseService = expenseService;
+        this.categoryService = categoryService;
         this.constants = constants;
+    }
+
+    /**
+     * Creates a new expense category (Admin operation)
+     * 
+     * @param categoryRequest DTO containing category details
+     * @return ResponseEntity containing created category
+     */
+    @PostMapping("/categories")
+    public ResponseEntity<ApiResponse<ExpenseCategory>> createCategory(
+            @Valid @RequestBody CategoryRequest categoryRequest) {
+        
+        log.info("Admin creating expense category: {}", categoryRequest.getName());
+        
+        try {
+            ExpenseCategory category = categoryService.createCategory(categoryRequest);
+            return ResponseEntity.ok(ApiResponse.success("Category created successfully", category));
+        } catch (Exception e) {
+            log.error("Error creating category {}: {}", categoryRequest.getName(), e.getMessage(), e);
+            throw new RuntimeException("Failed to create category", e);
+        }
     }
 
     /**
@@ -43,14 +71,25 @@ public class AdminExpenseController {
      * @return ResponseEntity containing list of employee expenses
      */
     @GetMapping("/get/{employeeId}")
-    public ResponseEntity<ApiResponseDto<List<ExpenseResponseDto>>> getExpensesByEmployeeId(
+    public ResponseEntity<ApiResponse<List<ExpenseResponse>>> getExpensesByEmployeeId(
             @PathVariable Long employeeId) {
         
         log.info("Admin fetching expenses for employee: {}", employeeId);
         
-        List<ExpenseResponseDto> expenses = expenseService.getExpensesByEmployeeId(employeeId);
-        
-        return ResponseEntity.ok(ApiResponseDto.success("Expenses retrieved successfully", expenses));
+        try {
+            if (employeeId == null || employeeId <= 0) {
+                throw new IllegalArgumentException("Invalid employee ID");
+            }
+            
+            List<ExpenseResponse> expenses = expenseService.getExpensesByEmployeeId(employeeId);
+            return ResponseEntity.ok(ApiResponse.success("Expenses retrieved successfully", expenses));
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid employee ID {}: {}", employeeId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error fetching expenses for employee {}: {}", employeeId, e.getMessage(), e);
+            throw new RuntimeException("Failed to fetch expenses", e);
+        }
     }
 
     /**
@@ -60,17 +99,25 @@ public class AdminExpenseController {
      * @param expenseId ID of the expense to update
      * @param expenseUpdateDto DTO containing new status and reviewer information
      * @return ResponseEntity containing updated expense details
+     * @throws ExpenseNotFoundException if expense is not found
      */
     @PutMapping("/update-expense/{expenseId}")
-    public ResponseEntity<ApiResponseDto<ExpenseResponseDto>> updateExpenseStatus(
+    public ResponseEntity<ApiResponse<ExpenseResponse>> updateExpenseStatus(
             @PathVariable Long expenseId,
-            @Valid @RequestBody ExpenseUpdateDto expenseUpdateDto) {
+            @Valid @RequestBody ExpenseUpdate expenseUpdateDto) throws ExpenseNotFoundException {
         
         log.info("Admin updating expense status for expense: {}", expenseId);
         
-        ExpenseResponseDto response = expenseService.updateExpenseStatus(expenseId, expenseUpdateDto);
-        
-        return ResponseEntity.ok(ApiResponseDto.success(constants.EXPENSE_UPDATED_SUCCESS, response));
+        try {
+            ExpenseResponse response = expenseService.updateExpenseStatus(expenseId, expenseUpdateDto);
+            return ResponseEntity.ok(ApiResponse.success(constants.EXPENSE_UPDATED_SUCCESS, response));
+        } catch (ExpenseNotFoundException e) {
+            log.error("Failed to update expense status for {}: {}", expenseId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error updating expense status for {}: {}", expenseId, e.getMessage(), e);
+            throw new RuntimeException("Failed to update expense status", e);
+        }
     }
 
     /**
@@ -79,14 +126,22 @@ public class AdminExpenseController {
      * 
      * @param expenseId ID of the expense to delete
      * @return ResponseEntity with success message
+     * @throws ExpenseNotFoundException if expense is not found
      */
     @DeleteMapping("/delete-expense/{expenseId}")
-    public ResponseEntity<ApiResponseDto<String>> deleteExpense(@PathVariable Long expenseId) {
+    public ResponseEntity<ApiResponse<String>> deleteExpense(@PathVariable Long expenseId) throws ExpenseNotFoundException {
         
         log.info("Admin deleting expense: {}", expenseId);
         
-        expenseService.deleteExpenseByAdmin(expenseId);
-        
-        return ResponseEntity.ok(ApiResponseDto.success(constants.EXPENSE_DELETED_SUCCESS, null));
+        try {
+            expenseService.deleteExpenseByAdmin(expenseId);
+            return ResponseEntity.ok(ApiResponse.success(constants.EXPENSE_DELETED_SUCCESS, null));
+        } catch (ExpenseNotFoundException e) {
+            log.error("Failed to delete expense {}: {}", expenseId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error deleting expense {}: {}", expenseId, e.getMessage(), e);
+            throw new RuntimeException("Failed to delete expense", e);
+        }
     }
 }

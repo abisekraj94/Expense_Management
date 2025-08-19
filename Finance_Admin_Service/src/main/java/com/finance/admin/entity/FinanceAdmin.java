@@ -14,7 +14,7 @@ import lombok.*;
  * @version 1.0.0
  */
 @Entity
-@Table(name = "finance_admins")
+@Table(name = "admin_users")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -51,7 +51,7 @@ public class FinanceAdmin extends BaseEntity {
      */
     @NotBlank(message = "${validation.name.required}")
     @Size(max = 100, message = "${validation.name.max.length}")
-    @Column(name = "admin_name", nullable = false, length = 100)
+    @Column(name = "full_name", nullable = false, length = 100)
     private String adminName;
 
     /**

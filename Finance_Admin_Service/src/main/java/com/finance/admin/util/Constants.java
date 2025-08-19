@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
  * @author Finance Team
  * @version 1.0.0
  */
-@Component
 public class Constants {
 
     // Application Constants
@@ -156,8 +155,5 @@ public class Constants {
     @Value("${field.length.rejection.reason.max}")
     public static Integer REJECTION_REASON_MAX_LENGTH;
 
-    // Private constructor to prevent instantiation
-    private Constants() {
-        throw new IllegalStateException("Utility class");
-    }
+
 }

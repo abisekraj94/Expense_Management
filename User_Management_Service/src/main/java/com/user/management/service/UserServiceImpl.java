@@ -5,10 +5,9 @@ import com.user.management.dto.AuthenticationResponse;
 import com.user.management.dto.UserLoginRequest;
 import com.user.management.dto.UserProfileResponse;
 import com.user.management.dto.UserRegistrationRequest;
-import com.user.management.dto.*;
 import com.user.management.entity.UserMgnt;
 import com.user.management.entity.UserRole;
-
+import com.user.management.exception.*;
 import com.user.management.repository.UserMgntRepository;
 import com.user.management.repository.UserRoleRepository;
 import com.user.management.security.JwtUtil;
@@ -44,24 +43,26 @@ public class UserServiceImpl implements UserService {
      * 
      * @param registrationRequest user registration details
      * @return user profile response
-    // * @throws EmailAlreadyExistsException if email already exists
+     * @throws EmailAlreadyExistsException if email already exists
+     * @throws RoleNotFoundException if role not found
      */
     @Override
-    public UserProfileResponse registerUser(UserRegistrationRequest registrationRequest) {
+    public UserProfileResponse registerUser(UserRegistrationRequest registrationRequest) 
+            throws EmailAlreadyExistsException, RoleNotFoundException {
         try {
             log.info("Attempting to register user with email: {}", registrationRequest.getEmail());
 
             // Check if email already exists
             if (userMgntRepository.existsByEmail(registrationRequest.getEmail())) {
                 log.warn("Registration failed - email already exists: {}", registrationRequest.getEmail());
-                throw new RuntimeException("Email already exists");
+                throw new EmailAlreadyExistsException("Email already exists");
             }
 
             // Find user role
             UserRole userRole = userRoleRepository.findByRoleName(registrationRequest.getRole())
                     .orElseThrow(() -> {
                         log.error("Role not found: {}", registrationRequest.getRole());
-                        return new RuntimeException("Role not found: " + registrationRequest.getRole());
+                        return new RoleNotFoundException("Role not found: " + registrationRequest.getRole());
                     });
 
             // Create new user entity
@@ -96,11 +97,12 @@ public class UserServiceImpl implements UserService {
      * 
      * @param loginRequest user login credentials
      * @return authentication response with JWT token
-    // * @throws InvalidCredentialsException if credentials are invalid
+     * @throws InvalidCredentialsException if credentials are invalid
      */
     @Override
     @Transactional(readOnly = true)
-    public AuthenticationResponse authenticateUser(UserLoginRequest loginRequest) {
+    public AuthenticationResponse authenticateUser(UserLoginRequest loginRequest) 
+            throws InvalidCredentialsException {
         try {
             log.info("Attempting to authenticate user: {}", loginRequest.getEmail());
 
@@ -108,13 +110,13 @@ public class UserServiceImpl implements UserService {
             UserMgnt user = userMgntRepository.findByEmailAndIsActiveTrue(loginRequest.getEmail())
                     .orElseThrow(() -> {
                         log.warn("Authentication failed - user not found or inactive: {}", loginRequest.getEmail());
-                        return new RuntimeException("Invalid credentials");
+                        return new InvalidCredentialsException("Invalid credentials");
                     });
 
             // Verify password
             if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
                 log.warn("Authentication failed - invalid password for user: {}", loginRequest.getEmail());
-                throw new RuntimeException("Invalid credentials");
+                throw new InvalidCredentialsException("Invalid credentials");
             }
 
             // Generate JWT token
@@ -141,18 +143,18 @@ public class UserServiceImpl implements UserService {
      * 
      * @param email user's email address
      * @return user profile response
-    // * @throws UserNotFoundException if user not found
+     * @throws UserNotFoundException if user not found
      */
     @Override
     @Transactional(readOnly = true)
-    public UserProfileResponse getUserProfile(String email) {
+    public UserProfileResponse getUserProfile(String email) throws UserNotFoundException {
         try {
             log.info("Fetching user profile for email: {}", email);
 
             UserMgnt user = userMgntRepository.findByEmailAndIsActiveTrue(email)
                     .orElseThrow(() -> {
                         log.warn("User profile not found for email: {}", email);
-                        return new RuntimeException("User not found");
+                        return new UserNotFoundException("User not found");
                     });
 
             UserProfileResponse response = modelMapper.map(user, UserProfileResponse.class);
@@ -175,17 +177,19 @@ public class UserServiceImpl implements UserService {
      * @param email user's email address
      * @param updateRequest profile update details
      * @return updated user profile response
-     //* @throws UserNotFoundException if user not found
+     * @throws UserNotFoundException if user not found
+     * @throws RoleNotFoundException if role not found
      */
     @Override
-    public UserProfileResponse updateUserProfile(String email, UserRegistrationRequest updateRequest) {
+    public UserProfileResponse updateUserProfile(String email, UserRegistrationRequest updateRequest) 
+            throws UserNotFoundException, RoleNotFoundException {
         try {
             log.info("Updating user profile for email: {}", email);
 
             UserMgnt user = userMgntRepository.findByEmailAndIsActiveTrue(email)
                     .orElseThrow(() -> {
                         log.warn("User not found for profile update: {}", email);
-                        return new RuntimeException("User not found");
+                        return new UserNotFoundException("User not found");
                     });
 
             // Update user information
@@ -198,7 +202,7 @@ public class UserServiceImpl implements UserService {
                 UserRole newRole = userRoleRepository.findByRoleName(updateRequest.getRole())
                         .orElseThrow(() -> {
                             log.error("Role not found: {}", updateRequest.getRole());
-                            return new RuntimeException("Role not found: " + updateRequest.getRole());
+                            return new RoleNotFoundException("Role not found: " + updateRequest.getRole());
                         });
                 user.setUserRole(newRole);
             }

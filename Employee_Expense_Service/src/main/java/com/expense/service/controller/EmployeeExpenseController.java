@@ -1,10 +1,13 @@
 package com.expense.service.controller;
 
 import com.expense.service.constants.ApplicationConstants;
-import com.expense.service.dto.ApiResponseDto;
-import com.expense.service.dto.ExpenseRequestDto;
-import com.expense.service.dto.ExpenseResponseDto;
+import com.expense.service.dto.ApiResponse;
+import com.expense.service.dto.ExpenseRequest;
+import com.expense.service.dto.ExpenseUpdateRequest;
+import com.expense.service.dto.ExpenseResponse;
+import com.expense.service.dto.DeleteRequest;
 import com.expense.service.service.ExpenseService;
+import com.expense.service.exception.GlobalExceptionHandler.*;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -40,17 +43,28 @@ public class EmployeeExpenseController {
      * 
      * @param expenseRequestDto Request DTO containing expense details
      * @return ResponseEntity with created expense details and HTTP 201 status
+     * @throws ExpenseCategoryNotFoundException if expense category is not found
+     * @throws CurrencyConversionException if currency conversion fails
+     * @throws BusinessRuleViolationException if business rules are violated
      */
     @PostMapping("/create-expense")
-    public ResponseEntity<ApiResponseDto<ExpenseResponseDto>> createExpense(
-            @Valid @RequestBody ExpenseRequestDto expenseRequestDto) {
+    public ResponseEntity<ApiResponse<ExpenseResponse>> createExpense(
+            @Valid @RequestBody ExpenseRequest expenseRequestDto) 
+            throws ExpenseCategoryNotFoundException, CurrencyConversionException, BusinessRuleViolationException {
         
         log.info("Creating expense for employee: {}", expenseRequestDto.getEmployeeId());
         
-        ExpenseResponseDto response = expenseService.createExpense(expenseRequestDto);
-        
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponseDto.success(constants.EXPENSE_CREATED_SUCCESS, response));
+        try {
+            ExpenseResponse response = expenseService.createExpense(expenseRequestDto);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success(constants.EXPENSE_CREATED_SUCCESS, response));
+        } catch (ExpenseCategoryNotFoundException | CurrencyConversionException | BusinessRuleViolationException e) {
+            log.error("Failed to create expense: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error creating expense: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to create expense", e);
+        }
     }
 
     /**
@@ -61,18 +75,33 @@ public class EmployeeExpenseController {
      * @param expenseRequestDto Updated expense details
      * @param employeeId ID of the employee making the update
      * @return ResponseEntity with updated expense details
+     * @throws ExpenseNotFoundException if expense is not found
+     * @throws UnauthorizedAccessException if employee is not authorized
+     * @throws ExpenseCategoryNotFoundException if expense category is not found
+     * @throws CurrencyConversionException if currency conversion fails
+     * @throws InvalidExpenseStatusException if expense status is invalid for update
      */
     @PutMapping("/update-expense/{expenseId}")
-    public ResponseEntity<ApiResponseDto<ExpenseResponseDto>> updateExpense(
+    public ResponseEntity<ApiResponse<ExpenseResponse>> updateExpense(
             @PathVariable Long expenseId,
-            @Valid @RequestBody ExpenseRequestDto expenseRequestDto,
-            @RequestParam Long employeeId) {
+            @Valid @RequestBody ExpenseUpdateRequest expenseUpdateDto,
+            @RequestParam Long employeeId) 
+            throws ExpenseNotFoundException, UnauthorizedAccessException, ExpenseCategoryNotFoundException, 
+                   CurrencyConversionException, InvalidExpenseStatusException {
         
         log.info("Updating expense {} for employee: {}", expenseId, employeeId);
         
-        ExpenseResponseDto response = expenseService.updateExpense(expenseId, expenseRequestDto, employeeId);
-        
-        return ResponseEntity.ok(ApiResponseDto.success(constants.EXPENSE_UPDATED_SUCCESS, response));
+        try {
+            ExpenseResponse response = expenseService.updateExpense(expenseId, expenseUpdateDto, employeeId);
+            return ResponseEntity.ok(ApiResponse.success(constants.EXPENSE_UPDATED_SUCCESS, response));
+        } catch (ExpenseNotFoundException | UnauthorizedAccessException | ExpenseCategoryNotFoundException | 
+                 CurrencyConversionException | InvalidExpenseStatusException e) {
+            log.error("Failed to update expense {}: {}", expenseId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error updating expense {}: {}", expenseId, e.getMessage(), e);
+            throw new RuntimeException("Failed to update expense", e);
+        }
     }
 
     /**
@@ -80,18 +109,28 @@ public class EmployeeExpenseController {
      * Only allows deletion of own expenses in 'Requested' status
      * 
      * @param expenseId ID of the expense to delete
-     * @param employeeId ID of the employee requesting deletion
+     * @param deleteRequest Request containing employeeId
      * @return ResponseEntity with success message
+     * @throws ExpenseNotFoundException if expense is not found
+     * @throws UnauthorizedAccessException if employee is not authorized
      */
     @DeleteMapping("/delete-expense/{expenseId}")
-    public ResponseEntity<ApiResponseDto<String>> deleteExpense(
+    public ResponseEntity<ApiResponse<String>> deleteExpense(
             @PathVariable Long expenseId,
-            @RequestParam Long employeeId) {
+            @RequestBody DeleteRequest deleteRequest) 
+            throws ExpenseNotFoundException, UnauthorizedAccessException {
         
-        log.info("Deleting expense {} for employee: {}", expenseId, employeeId);
+        log.info("Deleting expense {} for employee: {}", expenseId, deleteRequest.getEmployeeId());
         
-        expenseService.deleteExpense(expenseId, employeeId);
-        
-        return ResponseEntity.ok(ApiResponseDto.success(constants.EXPENSE_DELETED_SUCCESS, null));
+        try {
+            expenseService.deleteExpense(expenseId, deleteRequest.getEmployeeId());
+            return ResponseEntity.ok(ApiResponse.success(constants.EXPENSE_DELETED_SUCCESS, null));
+        } catch (ExpenseNotFoundException | UnauthorizedAccessException e) {
+            log.error("Failed to delete expense {}: {}", expenseId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error deleting expense {}: {}", expenseId, e.getMessage(), e);
+            throw new RuntimeException("Failed to delete expense", e);
+        }
     }
 }

@@ -2,14 +2,19 @@ package com.expense.service.service.impl;
 
 import com.expense.service.constants.ApplicationConstants;
 import com.expense.service.exception.GlobalExceptionHandler.CurrencyConversionException;
+import com.expense.service.exception.GlobalExceptionHandler.ExternalServiceException;
+import com.expense.service.exception.GlobalExceptionHandler.CacheOperationException;
 import com.expense.service.service.CurrencyService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -59,7 +64,7 @@ public class CurrencyServiceImpl implements CurrencyService {
      * @throws CurrencyConversionException if conversion fails
      */
     @Override
-    public BigDecimal convertCurrency(BigDecimal amount, String fromCurrency, String toCurrency) {
+    public BigDecimal convertCurrency(BigDecimal amount, String fromCurrency, String toCurrency) throws CurrencyConversionException {
         log.info("Converting {} {} to {}", amount, fromCurrency, toCurrency);
         
         if (fromCurrency.equals(toCurrency)) {
@@ -84,14 +89,20 @@ public class CurrencyServiceImpl implements CurrencyService {
      * @throws CurrencyConversionException if rate cannot be fetched or parsed
      */
     @Override
-    public BigDecimal getExchangeRate(String fromCurrency, String toCurrency) {
+    public BigDecimal getExchangeRate(String fromCurrency, String toCurrency) throws CurrencyConversionException {
         String cacheKey = constants.CURRENCY_CACHE_PREFIX + fromCurrency + "_" + toCurrency;
         
         // Try to get from cache first
-        String cachedRate = redisTemplate.opsForValue().get(cacheKey);
-        if (cachedRate != null) {
-            log.info("Using cached exchange rate for {} to {}: {}", fromCurrency, toCurrency, cachedRate);
-            return new BigDecimal(cachedRate);
+        try {
+            String cachedRate = redisTemplate.opsForValue().get(cacheKey);
+            if (cachedRate != null) {
+                log.info("Using cached exchange rate for {} to {}: {}", fromCurrency, toCurrency, cachedRate);
+                return new BigDecimal(cachedRate);
+            }
+        } catch (RedisConnectionFailureException e) {
+            log.warn("Redis cache unavailable, proceeding without cache: {}", e.getMessage());
+        } catch (Exception e) {
+            log.warn("Cache read failed, proceeding without cache: {}", e.getMessage());
         }
 
         // Fetch from external API
@@ -99,21 +110,49 @@ public class CurrencyServiceImpl implements CurrencyService {
             String url = currencyApiUrl + "/" + fromCurrency;
             String response = restTemplate.getForObject(url, String.class);
             
-            JsonNode jsonNode = objectMapper.readTree(response);
-            JsonNode ratesNode = jsonNode.get("rates");
+            if (response == null || response.trim().isEmpty()) {
+                throw new CurrencyConversionException("Empty response from currency API");
+            }
             
+            JsonNode jsonNode = objectMapper.readTree(response);
+            
+            // Check for API error response
+            if (jsonNode.has("error")) {
+                String errorMsg = jsonNode.get("error").asText();
+                throw new CurrencyConversionException("Currency API error: " + errorMsg);
+            }
+            
+            JsonNode ratesNode = jsonNode.get("rates");
             if (ratesNode == null || !ratesNode.has(toCurrency)) {
                 throw new CurrencyConversionException("Currency rate not found for " + toCurrency);
             }
             
             BigDecimal rate = ratesNode.get(toCurrency).decimalValue();
             
-            // Cache the rate for 1 hour
-            redisTemplate.opsForValue().set(cacheKey, rate.toString(), constants.CURRENCY_CACHE_TTL, TimeUnit.SECONDS);
+            if (rate.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new CurrencyConversionException("Invalid exchange rate received: " + rate);
+            }
             
-            log.info("Fetched and cached exchange rate for {} to {}: {}", fromCurrency, toCurrency, rate);
+            // Try to cache the rate
+            try {
+                redisTemplate.opsForValue().set(cacheKey, rate.toString(), constants.CURRENCY_CACHE_TTL, TimeUnit.SECONDS);
+                log.info("Fetched and cached exchange rate for {} to {}: {}", fromCurrency, toCurrency, rate);
+            } catch (RedisConnectionFailureException e) {
+                log.warn("Failed to cache exchange rate due to Redis connection issue: {}", e.getMessage());
+            } catch (Exception e) {
+                log.warn("Failed to cache exchange rate: {}", e.getMessage());
+            }
+            
             return rate;
             
+        } catch (CurrencyConversionException e) {
+            throw e;
+        } catch (ResourceAccessException e) {
+            log.error("Currency API timeout for {} to {}: {}", fromCurrency, toCurrency, e.getMessage());
+            throw new CurrencyConversionException("Currency service timeout", e);
+        } catch (RestClientException e) {
+            log.error("Currency API client error for {} to {}: {}", fromCurrency, toCurrency, e.getMessage());
+            throw new CurrencyConversionException("Currency service unavailable", e);
         } catch (Exception e) {
             log.error("Failed to fetch currency rate for {} to {}: {}", fromCurrency, toCurrency, e.getMessage());
             throw new CurrencyConversionException(constants.CURRENCY_CONVERSION_FAILED, e);

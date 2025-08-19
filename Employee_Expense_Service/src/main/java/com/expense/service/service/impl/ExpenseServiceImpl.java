@@ -1,14 +1,19 @@
 package com.expense.service.service.impl;
 
 import com.expense.service.constants.ApplicationConstants;
-import com.expense.service.dto.ExpenseRequestDto;
-import com.expense.service.dto.ExpenseResponseDto;
-import com.expense.service.dto.ExpenseUpdateDto;
+import com.expense.service.dto.ExpenseRequest;
+import com.expense.service.dto.ExpenseResponse;
+import com.expense.service.dto.ExpenseUpdate;
+import com.expense.service.dto.ExpenseUpdateRequest;
 import com.expense.service.entity.EmployeeExpense;
 import com.expense.service.entity.EmployeeExpenseDoc;
 import com.expense.service.entity.ExpenseCategory;
 import com.expense.service.exception.GlobalExceptionHandler.ExpenseNotFoundException;
 import com.expense.service.exception.GlobalExceptionHandler.UnauthorizedAccessException;
+import com.expense.service.exception.GlobalExceptionHandler.CurrencyConversionException;
+import com.expense.service.exception.GlobalExceptionHandler.ExpenseCategoryNotFoundException;
+import com.expense.service.exception.GlobalExceptionHandler.InvalidExpenseStatusException;
+import com.expense.service.exception.GlobalExceptionHandler.BusinessRuleViolationException;
 import com.expense.service.repository.EmployeeExpenseDocRepository;
 import com.expense.service.repository.EmployeeExpenseRepository;
 import com.expense.service.repository.ExpenseCategoryRepository;
@@ -16,8 +21,10 @@ import com.expense.service.service.CurrencyService;
 import com.expense.service.service.ExpenseService;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -42,7 +49,7 @@ public class ExpenseServiceImpl implements ExpenseService {
     /**
      * Constructor for ExpenseServiceImpl
      * Initializes all required dependencies for expense management operations
-     * 
+     *
      * @param expenseRepository Repository for expense data operations
      * @param categoryRepository Repository for expense category operations
      * @param docRepository Repository for expense document operations
@@ -67,54 +74,84 @@ public class ExpenseServiceImpl implements ExpenseService {
     /**
      * Creates a new expense submission for an employee
      * Validates expense category, converts currency to INR, and saves expense with documents
-     * 
+     *
      * @param expenseRequestDto Request DTO containing expense details
      * @return ExpenseResponseDto with created expense information
-     * @throws ExpenseNotFoundException if expense category is not found
+     * @throws ExpenseCategoryNotFoundException if expense category is not found
+     * @throws CurrencyConversionException if currency conversion fails
+     * @throws BusinessRuleViolationException if business rules are violated
      */
     @Override
-    public ExpenseResponseDto createExpense(ExpenseRequestDto expenseRequestDto) {
+    public ExpenseResponse createExpense(ExpenseRequest expenseRequestDto) throws ExpenseCategoryNotFoundException, CurrencyConversionException, BusinessRuleViolationException {
         log.info("Creating expense for employee: {}", expenseRequestDto.getEmployeeId());
 
-        ExpenseCategory category = categoryRepository.findByIdAndIsActiveTrue(expenseRequestDto.getExpenseCategoryId())
-                .orElseThrow(() -> new ExpenseNotFoundException(constants.CATEGORY_NOT_FOUND));
+        try {
+            // Validate input data
+            validateExpenseRequest(expenseRequestDto);
 
-        // Convert amount to INR
-        BigDecimal amountInr = currencyService.convertCurrency(
-                expenseRequestDto.getAmount(),
-                expenseRequestDto.getCurrency(),
-                constants.BASE_CURRENCY
-        );
+            ExpenseCategory category = categoryRepository.findByIdAndIsActiveTrue(expenseRequestDto.getExpenseCategoryId())
+                    .orElseThrow(() -> new ExpenseCategoryNotFoundException(constants.CATEGORY_NOT_FOUND));
 
-        EmployeeExpense expense = modelMapper.map(expenseRequestDto, EmployeeExpense.class);
-        expense.setExpenseCategory(category);
-        expense.setAmountInr(amountInr);
-        expense.setStatus(constants.STATUS_REQUESTED);
+            // Convert amount to INR
+            BigDecimal amountInr = currencyService.convertCurrency(
+                    expenseRequestDto.getAmount(),
+                    expenseRequestDto.getCurrency(),
+                    constants.BASE_CURRENCY
+            );
 
-        EmployeeExpense savedExpense = expenseRepository.save(expense);
+            // Check spending limits
+            validateSpendingLimit(category, amountInr, expenseRequestDto.getEmployeeId());
 
-        // Save documents if provided
-        if (expenseRequestDto.getDocuments() != null && !expenseRequestDto.getDocuments().isEmpty()) {
-            saveExpenseDocuments(savedExpense, expenseRequestDto.getDocuments());
+            EmployeeExpense expense = new EmployeeExpense();
+            expense.setEmployeeId(expenseRequestDto.getEmployeeId());
+            expense.setExpenseCategory(category);
+            expense.setCurrency(expenseRequestDto.getCurrency());
+            expense.setAmount(expenseRequestDto.getAmount());
+            expense.setAmountInr(amountInr);
+            expense.setDescription(expenseRequestDto.getDescription());
+            expense.setDateOfExpense(expenseRequestDto.getDateOfExpense());
+            expense.setStatus(constants.STATUS_REQUESTED);
+            expense.setIsActive(true);
+
+            EmployeeExpense savedExpense = expenseRepository.save(expense);
+
+            // Save documents if provided
+            if (expenseRequestDto.getDocuments() != null && !expenseRequestDto.getDocuments().isEmpty()) {
+                saveExpenseDocuments(savedExpense, expenseRequestDto.getDocuments());
+            }
+
+            log.info("Expense created successfully with ID: {}", savedExpense.getId());
+            return mapToResponseDto(savedExpense);
+
+        } catch (ExpenseCategoryNotFoundException | CurrencyConversionException | BusinessRuleViolationException e) {
+            throw e;
+        } catch (DataAccessException e) {
+            log.error("Database error while creating expense: {}", e.getMessage());
+            throw new RuntimeException("Failed to save expense due to database error", e);
+        } catch (Exception e) {
+            log.error("Unexpected error while creating expense: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to create expense", e);
         }
-
-        log.info("Expense created successfully with ID: {}", savedExpense.getId());
-        return mapToResponseDto(savedExpense);
     }
 
     /**
      * Updates an existing expense submission by employee
      * Only allows updates for expenses in 'Requested' status by the expense owner
-     * 
+     *
      * @param expenseId ID of the expense to update
-     * @param expenseRequestDto Updated expense details
+     //* @param expenseRequestDto Updated expense details
      * @param employeeId ID of the employee making the update
      * @return ExpenseResponseDto with updated expense information
-     * @throws ExpenseNotFoundException if expense or category is not found
-     * @throws UnauthorizedAccessException if employee is not authorized or expense status is not 'Requested'
+     * @throws ExpenseNotFoundException if expense is not found
+     * @throws UnauthorizedAccessException if employee is not authorized
+     * @throws ExpenseCategoryNotFoundException if expense category is not found
+     * @throws CurrencyConversionException if currency conversion fails
+     * @throws InvalidExpenseStatusException if expense status is invalid for update
      */
     @Override
-    public ExpenseResponseDto updateExpense(Long expenseId, ExpenseRequestDto expenseRequestDto, Long employeeId) {
+    public ExpenseResponse updateExpense(Long expenseId, ExpenseUpdateRequest expenseUpdateDto, Long employeeId)
+            throws ExpenseNotFoundException, UnauthorizedAccessException, ExpenseCategoryNotFoundException,
+                   CurrencyConversionException, InvalidExpenseStatusException {
         log.info("Updating expense {} for employee: {}", expenseId, employeeId);
 
         EmployeeExpense expense = expenseRepository.findByIdAndIsActiveTrue(expenseId)
@@ -126,25 +163,40 @@ public class ExpenseServiceImpl implements ExpenseService {
         }
 
         if (!constants.STATUS_REQUESTED.equals(expense.getStatus())) {
-            throw new UnauthorizedAccessException("Can only update expenses in Requested status");
+            throw new InvalidExpenseStatusException("Can only update expenses in Requested status");
         }
 
-        ExpenseCategory category = categoryRepository.findByIdAndIsActiveTrue(expenseRequestDto.getExpenseCategoryId())
-                .orElseThrow(() -> new ExpenseNotFoundException(constants.CATEGORY_NOT_FOUND));
+        // Update only provided fields
+        if (expenseUpdateDto.getExpenseCategoryId() != null) {
+            ExpenseCategory category = categoryRepository.findByIdAndIsActiveTrue(expenseUpdateDto.getExpenseCategoryId())
+                    .orElseThrow(() -> new ExpenseCategoryNotFoundException(constants.CATEGORY_NOT_FOUND));
+            expense.setExpenseCategory(category);
+        }
 
-        // Convert amount to INR
-        BigDecimal amountInr = currencyService.convertCurrency(
-                expenseRequestDto.getAmount(),
-                expenseRequestDto.getCurrency(),
-                constants.BASE_CURRENCY
-        );
+        if (expenseUpdateDto.getCurrency() != null) {
+            expense.setCurrency(expenseUpdateDto.getCurrency());
+        }
 
-        modelMapper.map(expenseRequestDto, expense);
-        expense.setExpenseCategory(category);
-        expense.setAmountInr(amountInr);
+        if (expenseUpdateDto.getAmount() != null) {
+            expense.setAmount(expenseUpdateDto.getAmount());
+            // Recalculate INR amount
+            BigDecimal amountInr = currencyService.convertCurrency(
+                    expenseUpdateDto.getAmount(),
+                    expense.getCurrency(),
+                    constants.BASE_CURRENCY
+            );
+            expense.setAmountInr(amountInr);
+        }
+
+        if (expenseUpdateDto.getDescription() != null) {
+            expense.setDescription(expenseUpdateDto.getDescription());
+        }
+
+        if (expenseUpdateDto.getDateOfExpense() != null) {
+            expense.setDateOfExpense(expenseUpdateDto.getDateOfExpense());
+        }
 
         EmployeeExpense updatedExpense = expenseRepository.save(expense);
-
         log.info("Expense updated successfully: {}", expenseId);
         return mapToResponseDto(updatedExpense);
     }
@@ -159,7 +211,7 @@ public class ExpenseServiceImpl implements ExpenseService {
      * @throws ExpenseNotFoundException if expense is not found
      */
     @Override
-    public ExpenseResponseDto updateExpenseStatus(Long expenseId, ExpenseUpdateDto expenseUpdateDto) {
+    public ExpenseResponse updateExpenseStatus(Long expenseId, ExpenseUpdate expenseUpdateDto) throws ExpenseNotFoundException {
         log.info("Updating expense status for expense: {}", expenseId);
 
         EmployeeExpense expense = expenseRepository.findByIdAndIsActiveTrue(expenseId)
@@ -179,14 +231,14 @@ public class ExpenseServiceImpl implements ExpenseService {
      * 
      * @param expenseId ID of the expense to delete
      * @param employeeId ID of the employee requesting deletion
-     * @throws UnauthorizedAccessException if employee cannot delete the expense
      * @throws ExpenseNotFoundException if expense is not found
+     * @throws UnauthorizedAccessException if employee is not authorized
      */
     @Override
-    public void deleteExpense(Long expenseId, Long employeeId) {
+    public void deleteExpense(Long expenseId, Long employeeId) throws ExpenseNotFoundException, UnauthorizedAccessException {
         log.info("Deleting expense {} for employee: {}", expenseId, employeeId);
 
-        if (!expenseRepository.existsByIdAndEmployeeIdAndStatusRequested(expenseId, employeeId)) {
+        if (!expenseRepository.existsByIdAndEmployeeIdAndStatus(expenseId, employeeId, constants.STATUS_REQUESTED)) {
             throw new UnauthorizedAccessException("Can only delete own expenses in Requested status");
         }
 
@@ -207,7 +259,7 @@ public class ExpenseServiceImpl implements ExpenseService {
      * @throws ExpenseNotFoundException if expense is not found
      */
     @Override
-    public void deleteExpenseByAdmin(Long expenseId) {
+    public void deleteExpenseByAdmin(Long expenseId) throws ExpenseNotFoundException {
         log.info("Admin deleting expense: {}", expenseId);
 
         EmployeeExpense expense = expenseRepository.findByIdAndIsActiveTrue(expenseId)
@@ -228,7 +280,7 @@ public class ExpenseServiceImpl implements ExpenseService {
      */
     @Override
     @Transactional(readOnly = true)
-    public List<ExpenseResponseDto> getExpensesByEmployeeId(Long employeeId) {
+    public List<ExpenseResponse> getExpensesByEmployeeId(Long employeeId) {
         log.info("Fetching expenses for employee: {}", employeeId);
 
         List<EmployeeExpense> expenses = expenseRepository.findByEmployeeIdAndIsActiveTrue(employeeId);
@@ -246,13 +298,63 @@ public class ExpenseServiceImpl implements ExpenseService {
      */
     @Override
     @Transactional(readOnly = true)
-    public ExpenseResponseDto getExpenseById(Long expenseId) {
+    public ExpenseResponse getExpenseById(Long expenseId) throws ExpenseNotFoundException {
         log.info("Fetching expense by ID: {}", expenseId);
 
-        EmployeeExpense expense = expenseRepository.findByIdAndIsActiveTrue(expenseId)
-                .orElseThrow(() -> new ExpenseNotFoundException(constants.EXPENSE_NOT_FOUND));
+        if (expenseId == null || expenseId <= 0) {
+            throw new IllegalArgumentException("Invalid expense ID");
+        }
 
-        return mapToResponseDto(expense);
+        try {
+            EmployeeExpense expense = expenseRepository.findByIdAndIsActiveTrue(expenseId)
+                    .orElseThrow(() -> new ExpenseNotFoundException(constants.EXPENSE_NOT_FOUND));
+
+            return mapToResponseDto(expense);
+        } catch (ExpenseNotFoundException e) {
+            throw e;
+        } catch (DataAccessException e) {
+            log.error("Database error while fetching expense {}: {}", expenseId, e.getMessage());
+            throw new RuntimeException("Failed to fetch expense due to database error", e);
+        } catch (Exception e) {
+            log.error("Unexpected error while fetching expense {}: {}", expenseId, e.getMessage(), e);
+            throw new RuntimeException("Failed to fetch expense", e);
+        }
+    }
+
+    /**
+     * Validates expense request data
+     */
+    private void validateExpenseRequest(ExpenseRequest request) throws BusinessRuleViolationException {
+        if (request.getEmployeeId() == null || request.getEmployeeId() <= 0) {
+            throw new BusinessRuleViolationException("Invalid employee ID");
+        }
+        
+        if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessRuleViolationException("Amount must be greater than zero");
+        }
+        
+        if (!StringUtils.hasText(request.getCurrency())) {
+            throw new BusinessRuleViolationException("Currency is required");
+        }
+        
+        if (!StringUtils.hasText(request.getDescription())) {
+            throw new BusinessRuleViolationException("Description is required");
+        }
+        
+        if (request.getDateOfExpense() == null) {
+            throw new BusinessRuleViolationException("Date of expense is required");
+        }
+    }
+
+    /**
+     * Validates spending limits against category limits
+     */
+    private void validateSpendingLimit(ExpenseCategory category, BigDecimal amountInr, Long employeeId) throws BusinessRuleViolationException {
+        if (category.getSpendingLimit() != null && amountInr.compareTo(category.getSpendingLimit()) > 0) {
+            throw new BusinessRuleViolationException(
+                String.format("Amount %.2f exceeds category spending limit of %.2f", 
+                    amountInr, category.getSpendingLimit()));
+        }
     }
 
     /**
@@ -282,11 +384,21 @@ public class ExpenseServiceImpl implements ExpenseService {
      * @param expense The expense entity to map
      * @return ExpenseResponseDto with complete expense information
      */
-    private ExpenseResponseDto mapToResponseDto(EmployeeExpense expense) {
-        ExpenseResponseDto dto = modelMapper.map(expense, ExpenseResponseDto.class);
+    private ExpenseResponse mapToResponseDto(EmployeeExpense expense) {
+        ExpenseResponse dto = new ExpenseResponse();
+        dto.setId(expense.getId());
+        dto.setEmployeeId(expense.getEmployeeId());
         dto.setCategoryName(expense.getExpenseCategory().getCategory());
+        dto.setCurrency(expense.getCurrency());
+        dto.setAmount(expense.getAmount());
+        dto.setAmountInr(expense.getAmountInr());
+        dto.setDescription(expense.getDescription());
+        dto.setDateOfExpense(expense.getDateOfExpense());
+        dto.setStatus(expense.getStatus());
+        dto.setReviewedBy(expense.getReviewedBy());
+        dto.setCreatedAt(expense.getCreatedAt());
+        dto.setUpdatedAt(expense.getUpdatedAt());
         
-        // Map documents
         if (expense.getDocuments() != null) {
             List<String> documents = expense.getDocuments().stream()
                     .filter(doc -> doc.getIsActive())

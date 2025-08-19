@@ -15,7 +15,7 @@ import java.time.LocalDate;
  * @version 1.0.0
  */
 @Entity
-@Table(name = "expenses")
+@Table(name = "expense_transactions")
 @Getter
 @Setter
 @NoArgsConstructor

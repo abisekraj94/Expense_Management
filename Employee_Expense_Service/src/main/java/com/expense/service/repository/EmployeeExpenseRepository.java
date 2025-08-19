@@ -49,6 +49,6 @@ public interface EmployeeExpenseRepository extends JpaRepository<EmployeeExpense
      * Check if expense belongs to employee and is in requested status
      * @throws DataAccessException if database access fails
      */
-    @Query("SELECT COUNT(ee) > 0 FROM EmployeeExpense ee WHERE ee.id = :expenseId AND ee.employeeId = :employeeId AND ee.status = 'Requested' AND ee.isActive = true")
-    boolean existsByIdAndEmployeeIdAndStatusRequested(@Param("expenseId") Long expenseId, @Param("employeeId") Long employeeId) throws DataAccessException;
+    @Query("SELECT COUNT(ee) > 0 FROM EmployeeExpense ee WHERE ee.id = :expenseId AND ee.employeeId = :employeeId AND ee.status = :status AND ee.isActive = true")
+    boolean existsByIdAndEmployeeIdAndStatus(@Param("expenseId") Long expenseId, @Param("employeeId") Long employeeId, @Param("status") String status) throws DataAccessException;
 }

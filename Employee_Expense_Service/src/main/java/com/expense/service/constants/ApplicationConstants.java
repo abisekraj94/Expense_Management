@@ -10,48 +10,18 @@ import org.springframework.stereotype.Component;
 @Component
 public class ApplicationConstants {
 
-    /**
-     * Gets the requested status constant
-     * Used for newly submitted expenses awaiting review
-     * 
-     * @return Status value for requested expenses
-     */
     @Value("${app.expense.status.requested}")
-    public static String STATUS_REQUESTED;
+    public String STATUS_REQUESTED;
     
-    /**
-     * Gets the in-progress status constant
-     * Used for expenses currently under review
-     * 
-     * @return Status value for in-progress expenses
-     */
     @Value("${app.expense.status.inprogress}")
     public String STATUS_IN_PROGRESS;
     
-    /**
-     * Gets the approved status constant
-     * Used for expenses that have been approved for reimbursement
-     * 
-     * @return Status value for approved expenses
-     */
     @Value("${app.expense.status.approved}")
     public String STATUS_APPROVED;
     
-    /**
-     * Gets the rejected status constant
-     * Used for expenses that have been denied
-     * 
-     * @return Status value for rejected expenses
-     */
     @Value("${app.expense.status.rejected}")
     public String STATUS_REJECTED;
     
-    /**
-     * Gets the reimbursed status constant
-     * Used for expenses that have been paid out
-     * 
-     * @return Status value for reimbursed expenses
-     */
     @Value("${app.expense.status.reimbursed}")
     public String STATUS_REIMBURSED;
 
@@ -110,10 +80,10 @@ public class ApplicationConstants {
 
     // Error Messages
     @Value("${app.message.expense.not.found}")
-    public static String EXPENSE_NOT_FOUND;
+    public String EXPENSE_NOT_FOUND;
     
     @Value("${app.message.category.not.found}")
-    public static String CATEGORY_NOT_FOUND;
+    public String CATEGORY_NOT_FOUND;
     
     @Value("${app.message.unauthorized.access}")
     public String UNAUTHORIZED_ACCESS;

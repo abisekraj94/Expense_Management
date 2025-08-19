@@ -2,6 +2,7 @@ package com.user.management.controller;
 
 import com.user.management.constants.ApplicationConstants;
 import com.user.management.dto.*;
+import com.user.management.exception.*;
 import com.user.management.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -46,11 +47,13 @@ public class AuthController {
             
             log.info("User registration completed successfully for email: {}", registrationRequest.getEmail());
             return new ResponseEntity<>(response, HttpStatus.CREATED);
-        } catch (RuntimeException e) {
-            if (e.getMessage().contains("already exists")) {
-                ApiResponse<UserProfileResponse> response = ApiResponse.error(constants.EMAIL_ALREADY_EXISTS);
-                return new ResponseEntity<>(response, HttpStatus.CONFLICT);
-            }
+        } catch (EmailAlreadyExistsException e) {
+            ApiResponse<UserProfileResponse> response = ApiResponse.error(constants.EMAIL_ALREADY_EXISTS);
+            return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+        } catch (RoleNotFoundException e) {
+            ApiResponse<UserProfileResponse> response = ApiResponse.error(e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
             ApiResponse<UserProfileResponse> response = ApiResponse.error("Registration failed");
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -76,11 +79,10 @@ public class AuthController {
             
             log.info("User login completed successfully for email: {}", loginRequest.getEmail());
             return new ResponseEntity<>(response, HttpStatus.OK);
-        } catch (RuntimeException e) {
-            if (e.getMessage().contains("credentials")) {
-                ApiResponse<AuthenticationResponse> response = ApiResponse.error(constants.INVALID_CREDENTIALS);
-                return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
-            }
+        } catch (InvalidCredentialsException e) {
+            ApiResponse<AuthenticationResponse> response = ApiResponse.error(constants.INVALID_CREDENTIALS);
+            return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+        } catch (Exception e) {
             ApiResponse<AuthenticationResponse> response = ApiResponse.error("Authentication failed");
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -102,7 +104,7 @@ public class AuthController {
             
             log.info("User logout completed successfully for email: {}", email);
             return new ResponseEntity<>(response, HttpStatus.OK);
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
             ApiResponse<Object> response = ApiResponse.error("Logout failed");
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }

@@ -5,7 +5,7 @@ import com.user.management.dto.AuthenticationResponse;
 import com.user.management.dto.UserLoginRequest;
 import com.user.management.dto.UserProfileResponse;
 import com.user.management.dto.UserRegistrationRequest;
-import com.usermgmt.usermanagement.dto.*;
+import com.user.management.dto.*;
 import com.user.management.entity.UserMgnt;
 import com.user.management.entity.UserRole;
 import com.user.management.repository.UserMgntRepository;

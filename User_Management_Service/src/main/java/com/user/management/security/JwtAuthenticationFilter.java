@@ -96,12 +96,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * @return true if endpoint is public
      */
     private boolean isPublicEndpoint(String path) {
-        return path.contains("/auth/register") || 
-               path.contains("/auth/login") || 
-               (path.contains("/health") && !path.contains("/profile")) ||
-               path.contains("/actuator") ||
-               path.contains("/swagger-ui") ||
-               path.contains("/v3/api-docs");
+        return path.startsWith("/api/v1/auth/") ||
+               path.equals("/api/v1/users/health") ||
+               path.startsWith("/swagger-ui/") ||
+               path.startsWith("/v3/api-docs");
     }
 
     /**
@@ -123,12 +121,5 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         log.debug("No valid Bearer token found in Authorization header");
         return null;
     }
-
-    /**
-     * Skip filter for public endpoints
-     * 
-     * @param request HTTP request
-     * @return true if filter should be skipped
-     */
 
 }

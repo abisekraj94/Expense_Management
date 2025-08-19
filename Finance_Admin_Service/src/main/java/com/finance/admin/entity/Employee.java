@@ -16,7 +16,7 @@ import java.util.List;
  * @version 1.0.0
  */
 @Entity
-@Table(name = "employees")
+@Table(name = "employee_master")
 @Getter
 @Setter
 @NoArgsConstructor

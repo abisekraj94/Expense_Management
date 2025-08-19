@@ -1,6 +1,6 @@
 package com.finance.admin.service.impl;
 
-import com.finance.admin.dto.ExpenseDto;
+import com.finance.admin.dto.Expense;
 import com.finance.admin.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +45,7 @@ public class EmailServiceImpl implements EmailService {
      */
     @Override
     @Async
-    public void sendApprovalNotification(ExpenseDto expense) {
+    public void sendApprovalNotification(Expense expense) {
         log.debug("Sending approval notification for expense: {}", expense.getExpenseId());
         
         try {
@@ -79,7 +79,7 @@ public class EmailServiceImpl implements EmailService {
      */
     @Override
     @Async
-    public void sendRejectionNotification(ExpenseDto expense) {
+    public void sendRejectionNotification(Expense expense) {
         log.debug("Sending rejection notification for expense: {}", expense.getExpenseId());
         
         try {

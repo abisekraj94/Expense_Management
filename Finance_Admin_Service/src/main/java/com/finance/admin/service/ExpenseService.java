@@ -23,7 +23,7 @@ public interface ExpenseService {
      * @param pageable pagination information
      * @return page of pending expenses
      */
-    Page<ExpenseDto> getPendingExpenses(Pageable pageable);
+    Page<Expense> getPendingExpenses(Pageable pageable);
 
     /**
      * Approve an expense
@@ -31,7 +31,7 @@ public interface ExpenseService {
      * @param approvalRequest approval request details
      * @return updated expense
      */
-    ExpenseDto approveExpense(ApprovalRequestDto approvalRequest);
+    Expense approveExpense(ApprovalRequest approvalRequest);
 
     /**
      * Reject an expense with reason
@@ -39,7 +39,7 @@ public interface ExpenseService {
      * @param rejectionRequest rejection request details
      * @return updated expense
      */
-    ExpenseDto rejectExpense(RejectionRequestDto rejectionRequest);
+    Expense rejectExpense(RejectionRequest rejectionRequest);
 
     /**
      * Get expense by ID
@@ -47,14 +47,14 @@ public interface ExpenseService {
      * @param expenseId expense identifier
      * @return expense details
      */
-    ExpenseDto getExpenseById(Long expenseId);
+    Expense getExpenseById(Long expenseId);
 
     /**
      * Get total approved amount by currency
      * 
      * @return list of currency totals
      */
-    List<ExpenseReportDto.CurrencyTotalDto> getTotalApprovedAmountByCurrency();
+    List<ExpenseReport.CurrencyTotalDto> getTotalApprovedAmountByCurrency();
 
     /**
      * Get total approved amount in INR
@@ -72,7 +72,7 @@ public interface ExpenseService {
      * @param pageable    pagination information
      * @return list of expense reports
      */
-    Page<ExpenseReportDto> generateExpenseReport(
+    Page<ExpenseReport> generateExpenseReport(
             List<Long> employeeIds, 
             LocalDate startDate, 
             LocalDate endDate, 
@@ -84,5 +84,5 @@ public interface ExpenseService {
      * @param expenseId expense ID to sync
      * @return synced expense
      */
-    ExpenseDto syncExpenseFromEmployeeService(Long expenseId);
+    Expense syncExpenseFromEmployeeService(Long expenseId);
 }

@@ -4,6 +4,7 @@ import com.user.management.constants.ApplicationConstants;
 import com.user.management.dto.ApiResponse;
 import com.user.management.dto.UserProfileResponse;
 import com.user.management.dto.UserRegistrationRequest;
+import com.user.management.exception.*;
 import com.user.management.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -52,11 +53,10 @@ public class UserController {
             
             log.info("Profile retrieved successfully for user: {}", principal.getName());
             return new ResponseEntity<>(response, HttpStatus.OK);
-        } catch (RuntimeException e) {
-            if (e.getMessage().contains("not found")) {
-                ApiResponse<UserProfileResponse> response = ApiResponse.error(constants.USER_NOT_FOUND);
-                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
-            }
+        } catch (UserNotFoundException e) {
+            ApiResponse<UserProfileResponse> response = ApiResponse.error(constants.USER_NOT_FOUND);
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
             ApiResponse<UserProfileResponse> response = ApiResponse.error("Failed to retrieve profile");
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -85,11 +85,13 @@ public class UserController {
             
             log.info("Profile updated successfully for user: {}", principal.getName());
             return new ResponseEntity<>(response, HttpStatus.OK);
-        } catch (RuntimeException e) {
-            if (e.getMessage().contains("not found")) {
-                ApiResponse<UserProfileResponse> response = ApiResponse.error(constants.USER_NOT_FOUND);
-                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
-            }
+        } catch (UserNotFoundException e) {
+            ApiResponse<UserProfileResponse> response = ApiResponse.error(constants.USER_NOT_FOUND);
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        } catch (RoleNotFoundException e) {
+            ApiResponse<UserProfileResponse> response = ApiResponse.error(e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
             ApiResponse<UserProfileResponse> response = ApiResponse.error("Failed to update profile");
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -115,11 +117,10 @@ public class UserController {
             
             log.info("Profile retrieved successfully for user: {} by admin", email);
             return new ResponseEntity<>(response, HttpStatus.OK);
-        } catch (RuntimeException e) {
-            if (e.getMessage().contains("not found")) {
-                ApiResponse<UserProfileResponse> response = ApiResponse.error(constants.USER_NOT_FOUND);
-                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
-            }
+        } catch (UserNotFoundException e) {
+            ApiResponse<UserProfileResponse> response = ApiResponse.error(constants.USER_NOT_FOUND);
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
             ApiResponse<UserProfileResponse> response = ApiResponse.error("Failed to retrieve profile");
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -144,7 +145,7 @@ public class UserController {
             
             log.info("Retrieved {} employees successfully", employees.size());
             return new ResponseEntity<>(response, HttpStatus.OK);
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
             ApiResponse<List<UserProfileResponse>> response = ApiResponse.error("Failed to retrieve employees");
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }

@@ -1,11 +1,13 @@
 spring:
   application:
     name: finance-admin-service
+  main:
+    allow-circular-references: true
   
   datasource:
-    url: jdbc:postgresql://localhost:5432/finance_admin_db
-    username: ${DB_USERNAME:finance_admin}
-    password: ${DB_PASSWORD:admin123}
+    url: jdbc:postgresql://localhost:5432/Expense_Reimburse
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:abisek}
     driver-class-name: org.postgresql.Driver
     
   jpa:
@@ -16,21 +18,27 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-        
+
   mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:finance@company.com}
-    password: ${MAIL_PASSWORD:mailpassword}
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:abisekideas2it@gmail.com}
+    password: ${MAIL_PASSWORD:riyo zhio bsfx wobu}
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
-            
+            required: true
+          ssl:
+            trust: smtp.gmail.com
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
 server:
-  port: ${SERVER_PORT:8081}
+  port: 8082
   servlet:
     context-path: /api/v1
 

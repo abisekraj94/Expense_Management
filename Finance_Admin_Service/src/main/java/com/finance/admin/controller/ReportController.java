@@ -1,6 +1,6 @@
 package com.finance.admin.controller;
 
-import com.finance.admin.dto.ExpenseReportDto;
+import com.finance.admin.dto.ExpenseReport;
 import com.finance.admin.service.ExpenseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +39,7 @@ public class ReportController {
      * @return page of expense reports
      */
     @GetMapping("/expenses")
-    public ResponseEntity<Page<ExpenseReportDto>> generateExpenseReport(
+    public ResponseEntity<Page<ExpenseReport>> generateExpenseReport(
             @RequestParam(required = false) List<Long> employeeIds,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
@@ -56,7 +56,7 @@ public class ReportController {
             endDate = LocalDate.now();
         }
         
-        Page<ExpenseReportDto> reports = expenseService.generateExpenseReport(
+        Page<ExpenseReport> reports = expenseService.generateExpenseReport(
                 employeeIds, startDate, endDate, pageable);
         
         log.info("Generated expense report with {} entries", reports.getNumberOfElements());
@@ -73,7 +73,7 @@ public class ReportController {
      * @return page of expense reports
      */
     @GetMapping("/expenses/employee/{employeeId}")
-    public ResponseEntity<Page<ExpenseReportDto>> generateExpenseReportByEmployee(
+    public ResponseEntity<Page<ExpenseReport>> generateExpenseReportByEmployee(
             @PathVariable Long employeeId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
@@ -90,7 +90,7 @@ public class ReportController {
             endDate = LocalDate.now();
         }
         
-        Page<ExpenseReportDto> reports = expenseService.generateExpenseReport(
+        Page<ExpenseReport> reports = expenseService.generateExpenseReport(
                 List.of(employeeId), startDate, endDate, pageable);
         
         log.info("Generated expense report for employee {} with {} entries", 

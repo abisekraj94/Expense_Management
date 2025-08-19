@@ -1,7 +1,6 @@
 package com.finance.admin.service.impl;
 
 import com.finance.admin.dto.*;
-import com.finance.admin.entity.Expense;
 import com.finance.admin.entity.ExpenseStatus;
 import com.finance.admin.exception.GlobalExceptionHandler.BusinessException;
 import com.finance.admin.exception.GlobalExceptionHandler.ResourceNotFoundException;
@@ -52,16 +51,16 @@ public class ExpenseServiceImpl implements ExpenseService {
      */
     @Override
     @Transactional(readOnly = true)
-    public Page<ExpenseDto> getPendingExpenses(Pageable pageable) {
+    public Page<Expense> getPendingExpenses(Pageable pageable) {
         log.debug("Fetching pending expenses with pagination: {}", pageable);
         
         try {
-            Page<Expense> expensePage = expenseRepository
+            Page<com.finance.admin.entity.Expense> expensePage = expenseRepository
                     .findByStatusAndIsDeletedFalseOrderByCreatedAtAsc(ExpenseStatus.PENDING, pageable);
             
-            List<ExpenseDto> expenseDtos = expensePage.getContent()
+            List<Expense> expenseDtos = expensePage.getContent()
                     .stream()
-                    .map(expense -> modelMapper.map(expense, ExpenseDto.class))
+                    .map(expense -> modelMapper.map(expense, Expense.class))
                     .collect(Collectors.toList());
             
             log.info("Retrieved {} pending expenses", expenseDtos.size());
@@ -77,11 +76,11 @@ public class ExpenseServiceImpl implements ExpenseService {
      * {@inheritDoc}
      */
     @Override
-    public ExpenseDto approveExpense(ApprovalRequestDto approvalRequest) {
+    public Expense approveExpense(ApprovalRequest approvalRequest) {
         log.debug("Approving expense with ID: {}", approvalRequest.getExpenseId());
         
         try {
-            Expense expense = expenseRepository.findById(approvalRequest.getExpenseId())
+            com.finance.admin.entity.Expense expense = expenseRepository.findById(approvalRequest.getExpenseId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Expense not found with ID: " + approvalRequest.getExpenseId()));
             
@@ -100,8 +99,8 @@ public class ExpenseServiceImpl implements ExpenseService {
                 convertAmountToInr(expense);
             }
             
-            Expense savedExpense = expenseRepository.save(expense);
-            ExpenseDto expenseDto = modelMapper.map(savedExpense, ExpenseDto.class);
+            com.finance.admin.entity.Expense savedExpense = expenseRepository.save(expense);
+            Expense expenseDto = modelMapper.map(savedExpense, Expense.class);
             
             // Send approval notification email asynchronously
             emailService.sendApprovalNotification(expenseDto);
@@ -121,11 +120,11 @@ public class ExpenseServiceImpl implements ExpenseService {
      * {@inheritDoc}
      */
     @Override
-    public ExpenseDto rejectExpense(RejectionRequestDto rejectionRequest) {
+    public Expense rejectExpense(RejectionRequest rejectionRequest) {
         log.debug("Rejecting expense with ID: {}", rejectionRequest.getExpenseId());
         
         try {
-            Expense expense = expenseRepository.findById(rejectionRequest.getExpenseId())
+            com.finance.admin.entity.Expense expense = expenseRepository.findById(rejectionRequest.getExpenseId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Expense not found with ID: " + rejectionRequest.getExpenseId()));
             
@@ -140,8 +139,8 @@ public class ExpenseServiceImpl implements ExpenseService {
             expense.setRejectionReason(rejectionRequest.getRejectionReason());
             expense.setUpdatedBy(rejectionRequest.getRejectedBy());
             
-            Expense savedExpense = expenseRepository.save(expense);
-            ExpenseDto expenseDto = modelMapper.map(savedExpense, ExpenseDto.class);
+            com.finance.admin.entity.Expense savedExpense = expenseRepository.save(expense);
+            Expense expenseDto = modelMapper.map(savedExpense, Expense.class);
             
             // Send rejection notification email asynchronously
             emailService.sendRejectionNotification(expenseDto);
@@ -162,15 +161,15 @@ public class ExpenseServiceImpl implements ExpenseService {
      */
     @Override
     @Transactional(readOnly = true)
-    public ExpenseDto getExpenseById(Long expenseId) {
+    public Expense getExpenseById(Long expenseId) {
         log.debug("Fetching expense with ID: {}", expenseId);
         
         try {
-            Expense expense = expenseRepository.findById(expenseId)
+            com.finance.admin.entity.Expense expense = expenseRepository.findById(expenseId)
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Expense not found with ID: " + expenseId));
             
-            return modelMapper.map(expense, ExpenseDto.class);
+            return modelMapper.map(expense, Expense.class);
             
         } catch (ResourceNotFoundException e) {
             throw e;
@@ -185,14 +184,14 @@ public class ExpenseServiceImpl implements ExpenseService {
      */
     @Override
     @Transactional(readOnly = true)
-    public List<ExpenseReportDto.CurrencyTotalDto> getTotalApprovedAmountByCurrency() {
+    public List<ExpenseReport.CurrencyTotalDto> getTotalApprovedAmountByCurrency() {
         log.debug("Fetching total approved amount by currency");
         
         try {
             List<Object[]> results = expenseRepository.getTotalApprovedAmountByCurrency();
             
             return results.stream()
-                    .map(result -> ExpenseReportDto.CurrencyTotalDto.builder()
+                    .map(result -> ExpenseReport.CurrencyTotalDto.builder()
                             .currency((String) result[0])
                             .totalAmount((BigDecimal) result[1])
                             .totalAmountInr((BigDecimal) result[2])
@@ -227,7 +226,7 @@ public class ExpenseServiceImpl implements ExpenseService {
      */
     @Override
     @Transactional(readOnly = true)
-    public Page<ExpenseReportDto> generateExpenseReport(
+    public Page<ExpenseReport> generateExpenseReport(
             List<Long> employeeIds, LocalDate startDate, LocalDate endDate, Pageable pageable) {
         
         log.debug("Generating expense report for employees: {}, date range: {} to {}", 
@@ -243,7 +242,7 @@ public class ExpenseServiceImpl implements ExpenseService {
             List<Object[]> employeeTotals = expenseRepository
                     .getTotalApprovedAmountByEmployee(employeeIds, startDate, endDate);
             
-            List<ExpenseReportDto> reports = employeeTotals.stream()
+            List<ExpenseReport> reports = employeeTotals.stream()
                     .map(result -> {
                         Long employeeId = (Long) result[0];
                         BigDecimal totalAmountInr = (BigDecimal) result[1];
@@ -258,8 +257,8 @@ public class ExpenseServiceImpl implements ExpenseService {
                         List<Object[]> currencyTotals = expenseRepository
                                 .getCurrencyTotalsByEmployee(employeeId, startDate, endDate);
                         
-                        List<ExpenseReportDto.CurrencyTotalDto> currencyDtos = currencyTotals.stream()
-                                .map(ct -> ExpenseReportDto.CurrencyTotalDto.builder()
+                        List<ExpenseReport.CurrencyTotalDto> currencyDtos = currencyTotals.stream()
+                                .map(ct -> ExpenseReport.CurrencyTotalDto.builder()
                                         .currency((String) ct[0])
                                         .totalAmount((BigDecimal) ct[1])
                                         .totalAmountInr((BigDecimal) ct[2])
@@ -267,8 +266,8 @@ public class ExpenseServiceImpl implements ExpenseService {
                                         .build())
                                 .collect(Collectors.toList());
                         
-                        return ExpenseReportDto.builder()
-                                .employee(modelMapper.map(employee, EmployeeDto.class))
+                        return ExpenseReport.builder()
+                                .employee(modelMapper.map(employee, Employee.class))
                                 .totalApprovedAmountInr(totalAmountInr)
                                 .currencyTotals(currencyDtos)
                                 .approvedExpenseCount(expenseCount)
@@ -291,7 +290,7 @@ public class ExpenseServiceImpl implements ExpenseService {
      * {@inheritDoc}
      */
     @Override
-    public ExpenseDto syncExpenseFromEmployeeService(Long expenseId) {
+    public Expense syncExpenseFromEmployeeService(Long expenseId) {
         log.debug("Syncing expense from Employee Service: {}", expenseId);
         
         // This would typically call the Employee Service to get expense details
@@ -304,7 +303,7 @@ public class ExpenseServiceImpl implements ExpenseService {
      * 
      * @param expense expense to convert
      */
-    private void convertAmountToInr(Expense expense) {
+    private void convertAmountToInr(com.finance.admin.entity.Expense expense) {
         try {
             if (!"INR".equals(expense.getCurrency())) {
                 BigDecimal exchangeRate = currencyService.getExchangeRateToInr(expense.getCurrency());

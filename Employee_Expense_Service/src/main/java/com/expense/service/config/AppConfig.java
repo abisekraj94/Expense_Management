@@ -42,14 +42,14 @@ public class AppConfig {
         return new ModelMapper();
     }
 
-    /**
+/*    *//**
      * Creates ObjectMapper bean for JSON processing
      * Handles JSON serialization and deserialization for API responses
      * 
      * @return ObjectMapper instance for JSON operations
-     */
+     *//*
     @Bean
     public ObjectMapper objectMapper() {
         return new ObjectMapper();
-    }
+    }*/
 }

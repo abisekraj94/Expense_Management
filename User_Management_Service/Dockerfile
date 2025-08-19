@@ -1,5 +1,7 @@
-# Multi-stage build for User Management Service
-FROM openjdk:17-jdk-slim as build
+# =========================
+# Stage 1: Build the application
+# =========================
+FROM eclipse-temurin:17-jdk-jammy AS build
 
 # Set working directory
 WORKDIR /app
@@ -18,8 +20,12 @@ COPY src src
 # Build the application
 RUN ./mvnw clean package -DskipTests
 
-# Runtime stage
-FROM openjdk:17-jre-slim
+# =========================
+# Stage 2: Runtime container
+# =========================
+FROM eclipse-temurin:17-jre-jammy AS runtime
+# For smaller image, use:
+# FROM eclipse-temurin:17-jre-alpine AS runtime
 
 # Set working directory
 WORKDIR /app

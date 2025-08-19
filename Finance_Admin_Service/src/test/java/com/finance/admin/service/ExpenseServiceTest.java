@@ -1,10 +1,9 @@
 package com.finance.admin.service;
 
-import com.finance.admin.dto.ApprovalRequestDto;
-import com.finance.admin.dto.ExpenseDto;
-import com.finance.admin.dto.RejectionRequestDto;
+import com.finance.admin.dto.ApprovalRequest;
+import com.finance.admin.dto.Expense;
+import com.finance.admin.dto.RejectionRequest;
 import com.finance.admin.entity.Employee;
-import com.finance.admin.entity.Expense;
 import com.finance.admin.entity.ExpenseStatus;
 import com.finance.admin.exception.GlobalExceptionHandler.BusinessException;
 import com.finance.admin.exception.GlobalExceptionHandler.ResourceNotFoundException;
@@ -57,8 +56,8 @@ class ExpenseServiceTest {
     @InjectMocks
     private ExpenseServiceImpl expenseService;
 
-    private Expense testExpense;
-    private ExpenseDto testExpenseDto;
+    private com.finance.admin.entity.Expense testExpense;
+    private Expense testExpenseDto;
     private Employee testEmployee;
 
     @BeforeEach
@@ -70,7 +69,7 @@ class ExpenseServiceTest {
                 .department("IT")
                 .build();
 
-        testExpense = Expense.builder()
+        testExpense = com.finance.admin.entity.Expense.builder()
                 .expenseId(1L)
                 .employee(testEmployee)
                 .description("Business Travel")
@@ -80,7 +79,7 @@ class ExpenseServiceTest {
                 .status(ExpenseStatus.PENDING)
                 .build();
 
-        testExpenseDto = ExpenseDto.builder()
+        testExpenseDto = Expense.builder()
                 .expenseId(1L)
                 .description("Business Travel")
                 .amount(new BigDecimal("500.00"))
@@ -93,15 +92,15 @@ class ExpenseServiceTest {
     void getPendingExpenses_ShouldReturnPageOfExpenses() {
         // Arrange
         Pageable pageable = PageRequest.of(0, 10);
-        List<Expense> expenses = List.of(testExpense);
-        Page<Expense> expensePage = new PageImpl<>(expenses, pageable, 1);
+        List<com.finance.admin.entity.Expense> expenses = List.of(testExpense);
+        Page<com.finance.admin.entity.Expense> expensePage = new PageImpl<>(expenses, pageable, 1);
 
         when(expenseRepository.findByStatusAndIsDeletedFalseOrderByCreatedAtAsc(
                 eq(ExpenseStatus.PENDING), eq(pageable))).thenReturn(expensePage);
-        when(modelMapper.map(any(Expense.class), eq(ExpenseDto.class))).thenReturn(testExpenseDto);
+        when(modelMapper.map(any(com.finance.admin.entity.Expense.class), eq(Expense.class))).thenReturn(testExpenseDto);
 
         // Act
-        Page<ExpenseDto> result = expenseService.getPendingExpenses(pageable);
+        Page<Expense> result = expenseService.getPendingExpenses(pageable);
 
         // Assert
         assertNotNull(result);
@@ -114,32 +113,32 @@ class ExpenseServiceTest {
     @Test
     void approveExpense_ShouldApproveExpenseSuccessfully() {
         // Arrange
-        ApprovalRequestDto approvalRequest = ApprovalRequestDto.builder()
+        ApprovalRequest approvalRequest = ApprovalRequest.builder()
                 .expenseId(1L)
                 .approvedBy("admin")
                 .build();
 
         when(expenseRepository.findById(1L)).thenReturn(Optional.of(testExpense));
         when(currencyService.getExchangeRateToInr("USD")).thenReturn(new BigDecimal("83.00"));
-        when(expenseRepository.save(any(Expense.class))).thenReturn(testExpense);
-        when(modelMapper.map(any(Expense.class), eq(ExpenseDto.class))).thenReturn(testExpenseDto);
+        when(expenseRepository.save(any(com.finance.admin.entity.Expense.class))).thenReturn(testExpense);
+        when(modelMapper.map(any(com.finance.admin.entity.Expense.class), eq(Expense.class))).thenReturn(testExpenseDto);
 
         // Act
-        ExpenseDto result = expenseService.approveExpense(approvalRequest);
+        Expense result = expenseService.approveExpense(approvalRequest);
 
         // Assert
         assertNotNull(result);
         assertEquals(ExpenseStatus.APPROVED, testExpense.getStatus());
         assertEquals("admin", testExpense.getApprovedBy());
         assertEquals(LocalDate.now(), testExpense.getApprovalDate());
-        verify(emailService).sendApprovalNotification(any(ExpenseDto.class));
+        verify(emailService).sendApprovalNotification(any(Expense.class));
         verify(expenseRepository).save(testExpense);
     }
 
     @Test
     void approveExpense_ShouldThrowExceptionWhenExpenseNotFound() {
         // Arrange
-        ApprovalRequestDto approvalRequest = ApprovalRequestDto.builder()
+        ApprovalRequest approvalRequest = ApprovalRequest.builder()
                 .expenseId(999L)
                 .approvedBy("admin")
                 .build();
@@ -149,15 +148,15 @@ class ExpenseServiceTest {
         // Act & Assert
         assertThrows(ResourceNotFoundException.class, 
                 () -> expenseService.approveExpense(approvalRequest));
-        verify(expenseRepository, never()).save(any(Expense.class));
-        verify(emailService, never()).sendApprovalNotification(any(ExpenseDto.class));
+        verify(expenseRepository, never()).save(any(com.finance.admin.entity.Expense.class));
+        verify(emailService, never()).sendApprovalNotification(any(Expense.class));
     }
 
     @Test
     void approveExpense_ShouldThrowExceptionWhenExpenseNotPending() {
         // Arrange
         testExpense.setStatus(ExpenseStatus.APPROVED);
-        ApprovalRequestDto approvalRequest = ApprovalRequestDto.builder()
+        ApprovalRequest approvalRequest = ApprovalRequest.builder()
                 .expenseId(1L)
                 .approvedBy("admin")
                 .build();
@@ -167,25 +166,25 @@ class ExpenseServiceTest {
         // Act & Assert
         assertThrows(BusinessException.class, 
                 () -> expenseService.approveExpense(approvalRequest));
-        verify(expenseRepository, never()).save(any(Expense.class));
-        verify(emailService, never()).sendApprovalNotification(any(ExpenseDto.class));
+        verify(expenseRepository, never()).save(any(com.finance.admin.entity.Expense.class));
+        verify(emailService, never()).sendApprovalNotification(any(Expense.class));
     }
 
     @Test
     void rejectExpense_ShouldRejectExpenseSuccessfully() {
         // Arrange
-        RejectionRequestDto rejectionRequest = RejectionRequestDto.builder()
+        RejectionRequest rejectionRequest = RejectionRequest.builder()
                 .expenseId(1L)
                 .rejectionReason("Invalid receipt")
                 .rejectedBy("admin")
                 .build();
 
         when(expenseRepository.findById(1L)).thenReturn(Optional.of(testExpense));
-        when(expenseRepository.save(any(Expense.class))).thenReturn(testExpense);
-        when(modelMapper.map(any(Expense.class), eq(ExpenseDto.class))).thenReturn(testExpenseDto);
+        when(expenseRepository.save(any(com.finance.admin.entity.Expense.class))).thenReturn(testExpense);
+        when(modelMapper.map(any(com.finance.admin.entity.Expense.class), eq(Expense.class))).thenReturn(testExpenseDto);
 
         // Act
-        ExpenseDto result = expenseService.rejectExpense(rejectionRequest);
+        Expense result = expenseService.rejectExpense(rejectionRequest);
 
         // Assert
         assertNotNull(result);
@@ -193,7 +192,7 @@ class ExpenseServiceTest {
         assertEquals("admin", testExpense.getApprovedBy());
         assertEquals("Invalid receipt", testExpense.getRejectionReason());
         assertEquals(LocalDate.now(), testExpense.getApprovalDate());
-        verify(emailService).sendRejectionNotification(any(ExpenseDto.class));
+        verify(emailService).sendRejectionNotification(any(Expense.class));
         verify(expenseRepository).save(testExpense);
     }
 
@@ -201,10 +200,10 @@ class ExpenseServiceTest {
     void getExpenseById_ShouldReturnExpense() {
         // Arrange
         when(expenseRepository.findById(1L)).thenReturn(Optional.of(testExpense));
-        when(modelMapper.map(any(Expense.class), eq(ExpenseDto.class))).thenReturn(testExpenseDto);
+        when(modelMapper.map(any(com.finance.admin.entity.Expense.class), eq(Expense.class))).thenReturn(testExpenseDto);
 
         // Act
-        ExpenseDto result = expenseService.getExpenseById(1L);
+        Expense result = expenseService.getExpenseById(1L);
 
         // Assert
         assertNotNull(result);

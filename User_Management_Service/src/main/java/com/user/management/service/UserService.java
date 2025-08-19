@@ -1,10 +1,7 @@
 package com.user.management.service;
 
-import com.user.management.dto.AuthenticationResponse;
-import com.user.management.dto.UserLoginRequest;
-import com.user.management.dto.UserProfileResponse;
-import com.user.management.dto.UserRegistrationRequest;
 import com.user.management.dto.*;
+import com.user.management.exception.*;
 
 /**
  * Service interface for user management operations
@@ -21,8 +18,10 @@ public interface UserService {
      * @param registrationRequest user registration details
      * @return user profile response
      * @throws EmailAlreadyExistsException if email already exists
+     * @throws RoleNotFoundException if role not found
      */
-    UserProfileResponse registerUser(UserRegistrationRequest registrationRequest);
+    UserProfileResponse registerUser(UserRegistrationRequest registrationRequest) 
+            throws EmailAlreadyExistsException, RoleNotFoundException;
 
     /**
      * Authenticate user and generate JWT token
@@ -31,7 +30,8 @@ public interface UserService {
      * @return authentication response with JWT token
      * @throws InvalidCredentialsException if credentials are invalid
      */
-    AuthenticationResponse authenticateUser(UserLoginRequest loginRequest);
+    AuthenticationResponse authenticateUser(UserLoginRequest loginRequest) 
+            throws InvalidCredentialsException;
 
     /**
      * Get user profile by email
@@ -40,7 +40,7 @@ public interface UserService {
      * @return user profile response
      * @throws UserNotFoundException if user not found
      */
-    UserProfileResponse getUserProfile(String email);
+    UserProfileResponse getUserProfile(String email) throws UserNotFoundException;
 
     /**
      * Update user profile information
@@ -49,8 +49,10 @@ public interface UserService {
      * @param updateRequest profile update details
      * @return updated user profile response
      * @throws UserNotFoundException if user not found
+     * @throws RoleNotFoundException if role not found
      */
-    UserProfileResponse updateUserProfile(String email, UserRegistrationRequest updateRequest);
+    UserProfileResponse updateUserProfile(String email, UserRegistrationRequest updateRequest) 
+            throws UserNotFoundException, RoleNotFoundException;
 
     /**
      * Logout user by removing JWT token from Redis
