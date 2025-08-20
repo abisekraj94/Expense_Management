@@ -74,8 +74,6 @@ public class ExpenseController {
         
         log.info("Approving expense with ID: {}", approvalRequest.getExpenseId());
         
-        approvalRequest.setApprovedBy("admin");
-        
         Expense expense = expenseService.approveExpense(approvalRequest);
         
         log.info("Expense approved successfully: {}", expense.getExpenseId());
@@ -93,8 +91,6 @@ public class ExpenseController {
             @Valid @RequestBody RejectionRequest rejectionRequest) {
         
         log.info("Rejecting expense with ID: {}", rejectionRequest.getExpenseId());
-        
-        rejectionRequest.setRejectedBy("admin");
         
         Expense expense = expenseService.rejectExpense(rejectionRequest);
         

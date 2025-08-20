@@ -2,6 +2,7 @@ package com.expense.service;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.PropertySource;
 
 /**
@@ -9,6 +10,7 @@ import org.springframework.context.annotation.PropertySource;
  * Microservice for handling employee expense submissions and management
  */
 @SpringBootApplication
+@EnableFeignClients
 @PropertySource("classpath:application-constants.properties")
 public class EmployeeExpenseServiceApplication {
 

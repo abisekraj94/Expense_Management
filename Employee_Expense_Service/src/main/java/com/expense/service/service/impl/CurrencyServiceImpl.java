@@ -90,7 +90,7 @@ public class CurrencyServiceImpl implements CurrencyService {
      */
     @Override
     public BigDecimal getExchangeRate(String fromCurrency, String toCurrency) throws CurrencyConversionException {
-        String cacheKey = constants.CURRENCY_CACHE_PREFIX + fromCurrency + "_" + toCurrency;
+        String cacheKey = constants.CURRENCY_CACHE_PREFIX + fromCurrency + constants.CACHE_KEY_SEPARATOR + toCurrency;
         
         // Try to get from cache first
         try {
@@ -107,30 +107,30 @@ public class CurrencyServiceImpl implements CurrencyService {
 
         // Fetch from external API
         try {
-            String url = currencyApiUrl + "/" + fromCurrency;
+            String url = currencyApiUrl + constants.URL_SEPARATOR + fromCurrency;
             String response = restTemplate.getForObject(url, String.class);
             
             if (response == null || response.trim().isEmpty()) {
-                throw new CurrencyConversionException("Empty response from currency API");
+                throw new CurrencyConversionException(constants.EMPTY_CURRENCY_RESPONSE);
             }
             
             JsonNode jsonNode = objectMapper.readTree(response);
             
             // Check for API error response
-            if (jsonNode.has("error")) {
-                String errorMsg = jsonNode.get("error").asText();
-                throw new CurrencyConversionException("Currency API error: " + errorMsg);
+            if (jsonNode.has(constants.JSON_KEY_ERROR)) {
+                String errorMsg = jsonNode.get(constants.JSON_KEY_ERROR).asText();
+                throw new CurrencyConversionException(constants.CURRENCY_API_ERROR + ": " + errorMsg);
             }
             
-            JsonNode ratesNode = jsonNode.get("rates");
+            JsonNode ratesNode = jsonNode.get(constants.JSON_KEY_RATES);
             if (ratesNode == null || !ratesNode.has(toCurrency)) {
-                throw new CurrencyConversionException("Currency rate not found for " + toCurrency);
+                throw new CurrencyConversionException(constants.CURRENCY_RATE_NOT_FOUND + " " + toCurrency);
             }
             
             BigDecimal rate = ratesNode.get(toCurrency).decimalValue();
             
             if (rate.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new CurrencyConversionException("Invalid exchange rate received: " + rate);
+                throw new CurrencyConversionException(constants.INVALID_EXCHANGE_RATE + ": " + rate);
             }
             
             // Try to cache the rate
@@ -149,10 +149,10 @@ public class CurrencyServiceImpl implements CurrencyService {
             throw e;
         } catch (ResourceAccessException e) {
             log.error("Currency API timeout for {} to {}: {}", fromCurrency, toCurrency, e.getMessage());
-            throw new CurrencyConversionException("Currency service timeout", e);
+            throw new CurrencyConversionException(constants.CURRENCY_TIMEOUT, e);
         } catch (RestClientException e) {
             log.error("Currency API client error for {} to {}: {}", fromCurrency, toCurrency, e.getMessage());
-            throw new CurrencyConversionException("Currency service unavailable", e);
+            throw new CurrencyConversionException(constants.CURRENCY_UNAVAILABLE, e);
         } catch (Exception e) {
             log.error("Failed to fetch currency rate for {} to {}: {}", fromCurrency, toCurrency, e.getMessage());
             throw new CurrencyConversionException(constants.CURRENCY_CONVERSION_FAILED, e);

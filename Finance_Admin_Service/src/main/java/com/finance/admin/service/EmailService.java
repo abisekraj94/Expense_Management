@@ -1,6 +1,7 @@
 package com.finance.admin.service;
 
 import com.finance.admin.dto.Expense;
+import com.finance.admin.exception.EmailException;
 
 /**
  * Service interface for email notification operations
@@ -16,12 +17,12 @@ public interface EmailService {
      * 
      * @param expense approved expense details
      */
-    void sendApprovalNotification(Expense expense);
+    void sendApprovalNotification(Expense expense) throws EmailException;
 
     /**
      * Send rejection notification email to employee
      * 
      * @param expense rejected expense details
      */
-    void sendRejectionNotification(Expense expense);
+    void sendRejectionNotification(Expense expense) throws EmailException;
 }

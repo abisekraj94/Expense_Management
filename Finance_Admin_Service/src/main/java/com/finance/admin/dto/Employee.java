@@ -15,28 +15,13 @@ import lombok.*;
 @Builder
 public class Employee {
 
-    /**
-     * Employee identifier
-     */
     private Long employeeId;
 
-    /**
-     * Employee name
-     */
     private String employeeName;
 
-    /**
-     * Employee email
-     */
     private String email;
 
-    /**
-     * Employee department
-     */
     private String department;
 
-    /**
-     * Employee designation
-     */
     private String designation;
 }

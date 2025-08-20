@@ -129,6 +129,42 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Custom exception for database operation failures
+     */
+    public static class DatabaseOperationException extends Exception {
+        public DatabaseOperationException(String message) {
+            super(message);
+        }
+        public DatabaseOperationException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
+    /**
+     * Custom exception for user service failures
+     */
+    public static class UserServiceException extends Exception {
+        public UserServiceException(String message) {
+            super(message);
+        }
+        public UserServiceException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
+    /**
+     * Custom exception for category service failures
+     */
+    public static class CategoryServiceException extends Exception {
+        public CategoryServiceException(String message) {
+            super(message);
+        }
+        public CategoryServiceException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
+    /**
      * Handles ExpenseNotFoundException and returns HTTP 404
      * Triggered when requested expense or category is not found
      * 
@@ -384,6 +420,36 @@ public class GlobalExceptionHandler {
         log.error("Resource not found: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error("Resource not found"));
+    }
+
+    /**
+     * Handles database operation exceptions and returns HTTP 500
+     */
+    @ExceptionHandler(DatabaseOperationException.class)
+    public ResponseEntity<ApiResponse<Object>> handleDatabaseOperationException(DatabaseOperationException ex) {
+        log.error("Database operation failed: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("Database operation failed"));
+    }
+
+    /**
+     * Handles user service exceptions and returns HTTP 404
+     */
+    @ExceptionHandler(UserServiceException.class)
+    public ResponseEntity<ApiResponse<Object>> handleUserServiceException(UserServiceException ex) {
+        log.error("User service error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    /**
+     * Handles category service exceptions and returns HTTP 500
+     */
+    @ExceptionHandler(CategoryServiceException.class)
+    public ResponseEntity<ApiResponse<Object>> handleCategoryServiceException(CategoryServiceException ex) {
+        log.error("Category service error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(ex.getMessage()));
     }
 
     /**

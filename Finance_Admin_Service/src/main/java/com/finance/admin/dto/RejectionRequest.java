@@ -18,21 +18,12 @@ import lombok.*;
 @Builder
 public class RejectionRequest {
 
-    /**
-     * Expense ID to reject
-     */
     @NotNull(message = "${validation.expense.id.required}")
     private Long expenseId;
 
-    /**
-     * Reason for rejection
-     */
     @NotBlank(message = "${validation.reason.required}")
     @Size(max = 1000, message = "${validation.reason.max.length}")
     private String rejectionReason;
 
-    /**
-     * Admin performing the rejection
-     */
     private String rejectedBy;
 }

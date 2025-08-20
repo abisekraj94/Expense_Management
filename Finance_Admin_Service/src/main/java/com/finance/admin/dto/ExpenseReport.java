@@ -18,58 +18,28 @@ import java.util.List;
 @Builder
 public class ExpenseReport {
 
-    /**
-     * Employee information
-     */
     private Employee employee;
 
-    /**
-     * Total approved amount by employee
-     */
     private BigDecimal totalApprovedAmount;
 
-    /**
-     * Total approved amount in INR
-     */
     private BigDecimal totalApprovedAmountInr;
 
-    /**
-     * Currency-wise breakdown
-     */
     private List<CurrencyTotalDto> currencyTotals;
 
-    /**
-     * Number of approved expenses
-     */
     private Long approvedExpenseCount;
 
-    /**
-     * Data Transfer Object for currency totals
-     */
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
     public static class CurrencyTotalDto {
         
-        /**
-         * Currency code
-         */
         private String currency;
         
-        /**
-         * Total amount in original currency
-         */
         private BigDecimal totalAmount;
         
-        /**
-         * Total amount converted to INR
-         */
         private BigDecimal totalAmountInr;
         
-        /**
-         * Number of expenses in this currency
-         */
         private Long expenseCount;
     }
 }

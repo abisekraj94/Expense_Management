@@ -49,17 +49,7 @@ public class GlobalExceptionHandler {
         }
     }
 
-    /**
-     * Custom exception for authentication failures
-     */
-    public static class AuthenticationException extends RuntimeException {
-        public AuthenticationException(String message) {
-            super(message);
-        }
-        public AuthenticationException(String message, Throwable cause) {
-            super(message, cause);
-        }
-    }
+
 
     /**
      * Standard error response structure for API errors
@@ -134,28 +124,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
-    /**
-     * Handle authentication exceptions
-     * 
-     * @param ex      the exception
-     * @param request the web request
-     * @return error response
-     */
-    @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<ErrorResponse> handleAuthenticationException(
-            AuthenticationException ex, WebRequest request) {
-        
-        log.error("Authentication exception: {}", ex.getMessage());
-        
-        ErrorResponse errorResponse = ErrorResponse.builder()
-                .status(HttpStatus.UNAUTHORIZED.value())
-                .error("Authentication Failed")
-                .message(ex.getMessage())
-                .path(request.getDescription(false).replace("uri=", ""))
-                .build();
-        
-        return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
-    }
+
 
     /**
      * Handle validation exceptions
@@ -188,11 +157,64 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle authentication exceptions
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(
+            AuthenticationException ex, WebRequest request) {
+        
+        log.error("Authentication failed: {}", ex.getMessage());
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .error("Authentication Failed")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+    }
+
+    /**
+     * Handle user service exceptions
+     */
+    @ExceptionHandler(UserServiceException.class)
+    public ResponseEntity<ErrorResponse> handleUserServiceException(
+            UserServiceException ex, WebRequest request) {
+        
+        log.error("User service error: {}", ex.getMessage());
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .error("User Service Error")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    /**
+     * Handle email exceptions
+     */
+    @ExceptionHandler(EmailException.class)
+    public ResponseEntity<ErrorResponse> handleEmailException(
+            EmailException ex, WebRequest request) {
+        
+        log.error("Email service error: {}", ex.getMessage());
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error("Email Service Error")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    /**
      * Handle generic exceptions
-     * 
-     * @param ex      the exception
-     * @param request the web request
-     * @return error response
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(

@@ -8,7 +8,7 @@ import com.expense.service.dto.ExpenseUpdate;
 import com.expense.service.entity.ExpenseCategory;
 import com.expense.service.service.CategoryService;
 import com.expense.service.service.ExpenseService;
-import com.expense.service.exception.GlobalExceptionHandler.ExpenseNotFoundException;
+import com.expense.service.exception.GlobalExceptionHandler.*;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -50,17 +50,12 @@ public class AdminExpenseController {
      */
     @PostMapping("/categories")
     public ResponseEntity<ApiResponse<ExpenseCategory>> createCategory(
-            @Valid @RequestBody CategoryRequest categoryRequest) {
+            @Valid @RequestBody CategoryRequest categoryRequest) throws CategoryServiceException {
         
         log.info("Admin creating expense category: {}", categoryRequest.getName());
         
-        try {
-            ExpenseCategory category = categoryService.createCategory(categoryRequest);
-            return ResponseEntity.ok(ApiResponse.success("Category created successfully", category));
-        } catch (Exception e) {
-            log.error("Error creating category {}: {}", categoryRequest.getName(), e.getMessage(), e);
-            throw new RuntimeException("Failed to create category", e);
-        }
+        ExpenseCategory category = categoryService.createCategory(categoryRequest);
+        return ResponseEntity.ok(ApiResponse.success(constants.CATEGORY_CREATED_SUCCESS, category));
     }
 
     /**
@@ -72,24 +67,16 @@ public class AdminExpenseController {
      */
     @GetMapping("/get/{employeeId}")
     public ResponseEntity<ApiResponse<List<ExpenseResponse>>> getExpensesByEmployeeId(
-            @PathVariable Long employeeId) {
+            @PathVariable Long employeeId) throws DatabaseOperationException {
         
         log.info("Admin fetching expenses for employee: {}", employeeId);
         
-        try {
-            if (employeeId == null || employeeId <= 0) {
-                throw new IllegalArgumentException("Invalid employee ID");
-            }
-            
-            List<ExpenseResponse> expenses = expenseService.getExpensesByEmployeeId(employeeId);
-            return ResponseEntity.ok(ApiResponse.success("Expenses retrieved successfully", expenses));
-        } catch (IllegalArgumentException e) {
-            log.error("Invalid employee ID {}: {}", employeeId, e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Unexpected error fetching expenses for employee {}: {}", employeeId, e.getMessage(), e);
-            throw new RuntimeException("Failed to fetch expenses", e);
+        if (employeeId == null || employeeId <= 0) {
+            throw new IllegalArgumentException(constants.INVALID_EMPLOYEE_ID);
         }
+        
+        List<ExpenseResponse> expenses = expenseService.getExpensesByEmployeeId(employeeId);
+        return ResponseEntity.ok(ApiResponse.success(constants.EXPENSES_RETRIEVED_SUCCESS, expenses));
     }
 
     /**
@@ -108,16 +95,8 @@ public class AdminExpenseController {
         
         log.info("Admin updating expense status for expense: {}", expenseId);
         
-        try {
-            ExpenseResponse response = expenseService.updateExpenseStatus(expenseId, expenseUpdateDto);
-            return ResponseEntity.ok(ApiResponse.success(constants.EXPENSE_UPDATED_SUCCESS, response));
-        } catch (ExpenseNotFoundException e) {
-            log.error("Failed to update expense status for {}: {}", expenseId, e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Unexpected error updating expense status for {}: {}", expenseId, e.getMessage(), e);
-            throw new RuntimeException("Failed to update expense status", e);
-        }
+        ExpenseResponse response = expenseService.updateExpenseStatus(expenseId, expenseUpdateDto);
+        return ResponseEntity.ok(ApiResponse.success(constants.EXPENSE_UPDATED_SUCCESS, response));
     }
 
     /**
@@ -133,15 +112,7 @@ public class AdminExpenseController {
         
         log.info("Admin deleting expense: {}", expenseId);
         
-        try {
-            expenseService.deleteExpenseByAdmin(expenseId);
-            return ResponseEntity.ok(ApiResponse.success(constants.EXPENSE_DELETED_SUCCESS, null));
-        } catch (ExpenseNotFoundException e) {
-            log.error("Failed to delete expense {}: {}", expenseId, e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Unexpected error deleting expense {}: {}", expenseId, e.getMessage(), e);
-            throw new RuntimeException("Failed to delete expense", e);
-        }
+        expenseService.deleteExpenseByAdmin(expenseId);
+        return ResponseEntity.ok(ApiResponse.success(constants.EXPENSE_DELETED_SUCCESS, null));
     }
 }

@@ -1,6 +1,7 @@
 package com.finance.admin.service.impl;
 
 import com.finance.admin.dto.Expense;
+import com.finance.admin.exception.EmailException;
 import com.finance.admin.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,38 +40,104 @@ public class EmailServiceImpl implements EmailService {
 
     @Value("${email.template.rejection}")
     private String rejectionTemplate;
+    
+    @Value("${email.subject.approval.prefix}")
+    private String approvalSubjectPrefix;
+    
+    @Value("${email.subject.rejection.prefix}")
+    private String rejectionSubjectPrefix;
+    
+    @Value("${email.encoding}")
+    private String emailEncoding;
+    
+    @Value("${email.template.var.expense}")
+    private String expenseVar;
+    
+    @Value("${email.template.var.employee.name}")
+    private String employeeNameVar;
+    
+    @Value("${email.template.var.amount}")
+    private String amountVar;
+    
+    @Value("${email.template.var.currency}")
+    private String currencyVar;
+    
+    @Value("${email.template.var.description}")
+    private String descriptionVar;
+    
+    @Value("${email.template.var.approved.by}")
+    private String approvedByVar;
+    
+    @Value("${email.template.var.approval.date}")
+    private String approvalDateVar;
+    
+    @Value("${email.template.var.rejected.by}")
+    private String rejectedByVar;
+    
+    @Value("${email.template.var.rejection.date}")
+    private String rejectionDateVar;
+    
+    @Value("${email.template.var.rejection.reason}")
+    private String rejectionReasonVar;
+    
+    @Value("${log.sending.approval.notification}")
+    private String logSendingApprovalNotification;
+    
+    @Value("${log.sending.rejection.notification}")
+    private String logSendingRejectionNotification;
+    
+    @Value("${success.approval.notification.sent}")
+    private String successApprovalNotificationSent;
+    
+    @Value("${success.rejection.notification.sent}")
+    private String successRejectionNotificationSent;
+    
+    @Value("${success.email.sent}")
+    private String successEmailSent;
+    
+    @Value("${error.failed.send.approval.notification}")
+    private String errorFailedSendApprovalNotification;
+    
+    @Value("${error.failed.send.rejection.notification}")
+    private String errorFailedSendRejectionNotification;
+    
+    @Value("${error.failed.send.email}")
+    private String errorFailedSendEmail;
 
     /**
      * {@inheritDoc}
      */
     @Override
     @Async
-    public void sendApprovalNotification(Expense expense) {
-        log.debug("Sending approval notification for expense: {}", expense.getExpenseId());
+    public void sendApprovalNotification(Expense expense) throws EmailException {
+        log.debug(logSendingApprovalNotification + "{}", expense.getExpenseId());
         
         try {
             Context context = new Context(Locale.getDefault());
-            context.setVariable("expense", expense);
-            context.setVariable("employeeName", expense.getEmployee().getEmployeeName());
-            context.setVariable("amount", expense.getAmount());
-            context.setVariable("currency", expense.getCurrency());
-            context.setVariable("description", expense.getDescription());
-            context.setVariable("approvedBy", expense.getApprovedBy());
-            context.setVariable("approvalDate", expense.getApprovalDate());
+            context.setVariable(expenseVar, expense);
+            context.setVariable(employeeNameVar, expense.getEmployee().getEmployeeName());
+            context.setVariable(amountVar, expense.getAmount());
+            context.setVariable(currencyVar, expense.getCurrency());
+            context.setVariable(descriptionVar, expense.getDescription());
+            context.setVariable(approvedByVar, expense.getApprovedBy());
+            context.setVariable(approvalDateVar, expense.getApprovalDate());
             
             String htmlContent = templateEngine.process(approvalTemplate, context);
             
             sendEmail(
                 expense.getEmployee().getEmail(),
-                "Expense Approved - " + expense.getDescription(),
+                approvalSubjectPrefix + expense.getDescription(),
                 htmlContent
             );
             
-            log.info("Approval notification sent for expense: {}", expense.getExpenseId());
+            log.info(successApprovalNotificationSent + "{}", expense.getExpenseId());
             
+        } catch (EmailException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to send approval notification for expense {}: {}", 
                     expense.getExpenseId(), e.getMessage(), e);
+            throw new EmailException(errorFailedSendApprovalNotification, e);
         }
     }
 
@@ -79,33 +146,36 @@ public class EmailServiceImpl implements EmailService {
      */
     @Override
     @Async
-    public void sendRejectionNotification(Expense expense) {
-        log.debug("Sending rejection notification for expense: {}", expense.getExpenseId());
+    public void sendRejectionNotification(Expense expense) throws EmailException {
+        log.debug(logSendingRejectionNotification + "{}", expense.getExpenseId());
         
         try {
             Context context = new Context(Locale.getDefault());
-            context.setVariable("expense", expense);
-            context.setVariable("employeeName", expense.getEmployee().getEmployeeName());
-            context.setVariable("amount", expense.getAmount());
-            context.setVariable("currency", expense.getCurrency());
-            context.setVariable("description", expense.getDescription());
-            context.setVariable("rejectedBy", expense.getApprovedBy());
-            context.setVariable("rejectionDate", expense.getApprovalDate());
-            context.setVariable("rejectionReason", expense.getRejectionReason());
+            context.setVariable(expenseVar, expense);
+            context.setVariable(employeeNameVar, expense.getEmployee().getEmployeeName());
+            context.setVariable(amountVar, expense.getAmount());
+            context.setVariable(currencyVar, expense.getCurrency());
+            context.setVariable(descriptionVar, expense.getDescription());
+            context.setVariable(rejectedByVar, expense.getApprovedBy());
+            context.setVariable(rejectionDateVar, expense.getApprovalDate());
+            context.setVariable(rejectionReasonVar, expense.getRejectionReason());
             
             String htmlContent = templateEngine.process(rejectionTemplate, context);
             
             sendEmail(
                 expense.getEmployee().getEmail(),
-                "Expense Rejected - " + expense.getDescription(),
+                rejectionSubjectPrefix + expense.getDescription(),
                 htmlContent
             );
             
-            log.info("Rejection notification sent for expense: {}", expense.getExpenseId());
+            log.info(successRejectionNotificationSent + "{}", expense.getExpenseId());
             
+        } catch (EmailException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to send rejection notification for expense {}: {}", 
                     expense.getExpenseId(), e.getMessage(), e);
+            throw new EmailException(errorFailedSendRejectionNotification, e);
         }
     }
 
@@ -116,10 +186,10 @@ public class EmailServiceImpl implements EmailService {
      * @param subject email subject
      * @param content HTML content
      */
-    private void sendEmail(String to, String subject, String content) {
+    private void sendEmail(String to, String subject, String content) throws EmailException {
         try {
             MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, emailEncoding);
             
             helper.setFrom(fromEmail);
             helper.setTo(to);
@@ -127,11 +197,11 @@ public class EmailServiceImpl implements EmailService {
             helper.setText(content, true);
             
             mailSender.send(message);
-            log.debug("Email sent successfully to: {}", to);
+            log.debug(successEmailSent + "{}", to);
             
         } catch (MessagingException e) {
             log.error("Failed to send email to {}: {}", to, e.getMessage(), e);
-            throw new RuntimeException("Failed to send email", e);
+            throw new EmailException(errorFailedSendEmail, e);
         }
     }
 }

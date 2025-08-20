@@ -50,21 +50,13 @@ public class EmployeeExpenseController {
     @PostMapping("/create-expense")
     public ResponseEntity<ApiResponse<ExpenseResponse>> createExpense(
             @Valid @RequestBody ExpenseRequest expenseRequestDto) 
-            throws ExpenseCategoryNotFoundException, CurrencyConversionException, BusinessRuleViolationException {
+            throws ExpenseCategoryNotFoundException, CurrencyConversionException, BusinessRuleViolationException, DatabaseOperationException {
         
         log.info("Creating expense for employee: {}", expenseRequestDto.getEmployeeId());
         
-        try {
-            ExpenseResponse response = expenseService.createExpense(expenseRequestDto);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.success(constants.EXPENSE_CREATED_SUCCESS, response));
-        } catch (ExpenseCategoryNotFoundException | CurrencyConversionException | BusinessRuleViolationException e) {
-            log.error("Failed to create expense: {}", e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Unexpected error creating expense: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to create expense", e);
-        }
+        ExpenseResponse response = expenseService.createExpense(expenseRequestDto);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(constants.EXPENSE_CREATED_SUCCESS, response));
     }
 
     /**
@@ -72,7 +64,7 @@ public class EmployeeExpenseController {
      * Only allows updates for expenses in 'Requested' status by the expense owner
      * 
      * @param expenseId ID of the expense to update
-     * @param expenseRequestDto Updated expense details
+   //  * @param expenseRequestDto Updated expense details
      * @param employeeId ID of the employee making the update
      * @return ResponseEntity with updated expense details
      * @throws ExpenseNotFoundException if expense is not found
@@ -91,17 +83,8 @@ public class EmployeeExpenseController {
         
         log.info("Updating expense {} for employee: {}", expenseId, employeeId);
         
-        try {
-            ExpenseResponse response = expenseService.updateExpense(expenseId, expenseUpdateDto, employeeId);
-            return ResponseEntity.ok(ApiResponse.success(constants.EXPENSE_UPDATED_SUCCESS, response));
-        } catch (ExpenseNotFoundException | UnauthorizedAccessException | ExpenseCategoryNotFoundException | 
-                 CurrencyConversionException | InvalidExpenseStatusException e) {
-            log.error("Failed to update expense {}: {}", expenseId, e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Unexpected error updating expense {}: {}", expenseId, e.getMessage(), e);
-            throw new RuntimeException("Failed to update expense", e);
-        }
+        ExpenseResponse response = expenseService.updateExpense(expenseId, expenseUpdateDto, employeeId);
+        return ResponseEntity.ok(ApiResponse.success(constants.EXPENSE_UPDATED_SUCCESS, response));
     }
 
     /**
@@ -122,15 +105,7 @@ public class EmployeeExpenseController {
         
         log.info("Deleting expense {} for employee: {}", expenseId, deleteRequest.getEmployeeId());
         
-        try {
-            expenseService.deleteExpense(expenseId, deleteRequest.getEmployeeId());
-            return ResponseEntity.ok(ApiResponse.success(constants.EXPENSE_DELETED_SUCCESS, null));
-        } catch (ExpenseNotFoundException | UnauthorizedAccessException e) {
-            log.error("Failed to delete expense {}: {}", expenseId, e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Unexpected error deleting expense {}: {}", expenseId, e.getMessage(), e);
-            throw new RuntimeException("Failed to delete expense", e);
-        }
+        expenseService.deleteExpense(expenseId, deleteRequest.getEmployeeId());
+        return ResponseEntity.ok(ApiResponse.success(constants.EXPENSE_DELETED_SUCCESS, null));
     }
 }

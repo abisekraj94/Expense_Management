@@ -36,13 +36,61 @@ public class CurrencyServiceImpl implements CurrencyService {
 
     @Value("${currency.base.currency:INR}")
     private String baseCurrency;
+    
+    @Value("${currency.inr}")
+    private String currencyInr;
+    
+    @Value("${currency.usd}")
+    private String currencyUsd;
+    
+    @Value("${currency.eur}")
+    private String currencyEur;
+    
+    @Value("${currency.gbp}")
+    private String currencyGbp;
+    
+    @Value("${exchange.rate.usd.to.inr}")
+    private String usdToInrRate;
+    
+    @Value("${exchange.rate.eur.to.inr}")
+    private String eurToInrRate;
+    
+    @Value("${exchange.rate.gbp.to.inr}")
+    private String gbpToInrRate;
+    
+    @Value("${error.failed.fetch.exchange.rates}")
+    private String errorFailedFetchExchangeRates;
+    
+    @Value("${error.exchange.rate.not.found}")
+    private String errorExchangeRateNotFound;
+    
+    @Value("${error.failed.get.exchange.rate}")
+    private String errorFailedGetExchangeRate;
+    
+    @Value("${error.failed.convert.currency.inr}")
+    private String errorFailedConvertCurrencyInr;
+    
+    @Value("${log.getting.exchange.rate}")
+    private String logGettingExchangeRate;
+    
+    @Value("${log.converting.currency}")
+    private String logConvertingCurrency;
+    
+    @Value("${log.using.default.exchange.rate}")
+    private String logUsingDefaultExchangeRate;
+    
+    @Value("${log.exchange.rate.result}")
+    private String logExchangeRateResult;
+    
+    @Value("${log.converted.currency}")
+    private String logConvertedCurrency;
 
     /**
      * {@inheritDoc}
      */
     @Override
     public BigDecimal getExchangeRate(String fromCurrency, String toCurrency) {
-        log.debug("Getting exchange rate from {} to {}", fromCurrency, toCurrency);
+        log.debug(logGettingExchangeRate, fromCurrency, toCurrency);
         
         if (fromCurrency.equals(toCurrency)) {
             return BigDecimal.ONE;
@@ -62,15 +110,15 @@ public class CurrencyServiceImpl implements CurrencyService {
                     .block();
             
             if (response == null || response.getRates() == null) {
-                throw new BusinessException("Failed to fetch exchange rates");
+                throw new BusinessException(errorFailedFetchExchangeRates);
             }
             
             BigDecimal rate = response.getRates().get(toCurrency);
             if (rate == null) {
-                throw new BusinessException("Exchange rate not found for currency: " + toCurrency);
+                throw new BusinessException(errorExchangeRateNotFound + toCurrency);
             }
             
-            log.debug("Exchange rate from {} to {}: {}", fromCurrency, toCurrency, rate);
+            log.debug(logExchangeRateResult, fromCurrency, toCurrency, rate);
             return rate.setScale(6, RoundingMode.HALF_UP);
             
         } catch (WebClientException e) {
@@ -79,7 +127,7 @@ public class CurrencyServiceImpl implements CurrencyService {
             return getDefaultExchangeRate(fromCurrency, toCurrency);
         } catch (Exception e) {
             log.error("Error getting exchange rate: {}", e.getMessage(), e);
-            throw new BusinessException("Failed to get exchange rate", e);
+            throw new BusinessException(errorFailedGetExchangeRate, e);
         }
     }
 
@@ -88,9 +136,9 @@ public class CurrencyServiceImpl implements CurrencyService {
      */
     @Override
     public BigDecimal convertToInr(BigDecimal amount, String fromCurrency) {
-        log.debug("Converting {} {} to INR", amount, fromCurrency);
+        log.debug(logConvertingCurrency, amount, fromCurrency);
         
-        if ("INR".equals(fromCurrency)) {
+        if (currencyInr.equals(fromCurrency)) {
             return amount;
         }
         
@@ -99,12 +147,12 @@ public class CurrencyServiceImpl implements CurrencyService {
             BigDecimal convertedAmount = amount.multiply(exchangeRate)
                     .setScale(2, RoundingMode.HALF_UP);
             
-            log.debug("Converted {} {} to {} INR", amount, fromCurrency, convertedAmount);
+            log.debug(logConvertedCurrency, amount, fromCurrency, convertedAmount);
             return convertedAmount;
             
         } catch (Exception e) {
             log.error("Error converting to INR: {}", e.getMessage(), e);
-            throw new BusinessException("Failed to convert currency to INR", e);
+            throw new BusinessException(errorFailedConvertCurrencyInr, e);
         }
     }
 
@@ -113,7 +161,7 @@ public class CurrencyServiceImpl implements CurrencyService {
      */
     @Override
     public BigDecimal getExchangeRateToInr(String currency) {
-        return getExchangeRate(currency, "INR");
+        return getExchangeRate(currency, currencyInr);
     }
 
     /**
@@ -124,15 +172,15 @@ public class CurrencyServiceImpl implements CurrencyService {
      * @return default exchange rate
      */
     private BigDecimal getDefaultExchangeRate(String fromCurrency, String toCurrency) {
-        log.warn("Using default exchange rate for {} to {}", fromCurrency, toCurrency);
+        log.warn(logUsingDefaultExchangeRate, fromCurrency, toCurrency);
         
         // Default rates from configuration
-        if ("USD".equals(fromCurrency) && "INR".equals(toCurrency)) {
-            return new BigDecimal("83.00");
-        } else if ("EUR".equals(fromCurrency) && "INR".equals(toCurrency)) {
-            return new BigDecimal("90.00");
-        } else if ("GBP".equals(fromCurrency) && "INR".equals(toCurrency)) {
-            return new BigDecimal("105.00");
+        if (currencyUsd.equals(fromCurrency) && currencyInr.equals(toCurrency)) {
+            return new BigDecimal(usdToInrRate);
+        } else if (currencyEur.equals(fromCurrency) && currencyInr.equals(toCurrency)) {
+            return new BigDecimal(eurToInrRate);
+        } else if (currencyGbp.equals(fromCurrency) && currencyInr.equals(toCurrency)) {
+            return new BigDecimal(gbpToInrRate);
         }
         
         // Default fallback rate

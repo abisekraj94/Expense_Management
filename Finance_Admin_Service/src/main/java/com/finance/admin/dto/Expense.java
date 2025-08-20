@@ -20,73 +20,31 @@ import java.time.LocalDateTime;
 @Builder
 public class Expense {
 
-    /**
-     * Expense identifier
-     */
     private Long expenseId;
 
-    /**
-     * Employee information
-     */
     private Employee employee;
 
-    /**
-     * Expense description
-     */
     private String description;
 
-    /**
-     * Expense amount
-     */
     private BigDecimal amount;
 
-    /**
-     * Currency code
-     */
     private String currency;
 
-    /**
-     * Date of expense
-     */
     private LocalDate expenseDate;
 
-    /**
-     * Current status
-     */
     private ExpenseStatus status;
 
-    /**
-     * Admin who approved/rejected
-     */
     private String approvedBy;
 
-    /**
-     * Approval date
-     */
     private LocalDate approvalDate;
 
-    /**
-     * Rejection reason
-     */
     private String rejectionReason;
 
-    /**
-     * Amount in INR
-     */
     private BigDecimal amountInr;
 
-    /**
-     * Exchange rate used
-     */
     private BigDecimal exchangeRate;
 
-    /**
-     * Creation timestamp
-     */
     private LocalDateTime createdAt;
 
-    /**
-     * Last update timestamp
-     */
     private LocalDateTime updatedAt;
 }

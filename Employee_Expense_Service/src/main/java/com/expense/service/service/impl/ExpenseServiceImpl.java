@@ -14,6 +14,7 @@ import com.expense.service.exception.GlobalExceptionHandler.CurrencyConversionEx
 import com.expense.service.exception.GlobalExceptionHandler.ExpenseCategoryNotFoundException;
 import com.expense.service.exception.GlobalExceptionHandler.InvalidExpenseStatusException;
 import com.expense.service.exception.GlobalExceptionHandler.BusinessRuleViolationException;
+import com.expense.service.exception.GlobalExceptionHandler.DatabaseOperationException;
 import com.expense.service.repository.EmployeeExpenseDocRepository;
 import com.expense.service.repository.EmployeeExpenseRepository;
 import com.expense.service.repository.ExpenseCategoryRepository;
@@ -82,7 +83,7 @@ public class ExpenseServiceImpl implements ExpenseService {
      * @throws BusinessRuleViolationException if business rules are violated
      */
     @Override
-    public ExpenseResponse createExpense(ExpenseRequest expenseRequestDto) throws ExpenseCategoryNotFoundException, CurrencyConversionException, BusinessRuleViolationException {
+    public ExpenseResponse createExpense(ExpenseRequest expenseRequestDto) throws ExpenseCategoryNotFoundException, CurrencyConversionException, BusinessRuleViolationException, DatabaseOperationException {
         log.info("Creating expense for employee: {}", expenseRequestDto.getEmployeeId());
 
         try {
@@ -127,10 +128,10 @@ public class ExpenseServiceImpl implements ExpenseService {
             throw e;
         } catch (DataAccessException e) {
             log.error("Database error while creating expense: {}", e.getMessage());
-            throw new RuntimeException("Failed to save expense due to database error", e);
+            throw new DatabaseOperationException("Failed to save expense due to database error", e);
         } catch (Exception e) {
             log.error("Unexpected error while creating expense: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to create expense", e);
+            throw new DatabaseOperationException("Failed to create expense", e);
         }
     }
 
@@ -163,7 +164,7 @@ public class ExpenseServiceImpl implements ExpenseService {
         }
 
         if (!constants.STATUS_REQUESTED.equals(expense.getStatus())) {
-            throw new InvalidExpenseStatusException("Can only update expenses in Requested status");
+            throw new InvalidExpenseStatusException(constants.CAN_ONLY_UPDATE_REQUESTED);
         }
 
         // Update only provided fields
@@ -239,7 +240,7 @@ public class ExpenseServiceImpl implements ExpenseService {
         log.info("Deleting expense {} for employee: {}", expenseId, employeeId);
 
         if (!expenseRepository.existsByIdAndEmployeeIdAndStatus(expenseId, employeeId, constants.STATUS_REQUESTED)) {
-            throw new UnauthorizedAccessException("Can only delete own expenses in Requested status");
+            throw new UnauthorizedAccessException(constants.CAN_ONLY_DELETE_REQUESTED);
         }
 
         EmployeeExpense expense = expenseRepository.findByIdAndIsActiveTrue(expenseId)
@@ -280,13 +281,21 @@ public class ExpenseServiceImpl implements ExpenseService {
      */
     @Override
     @Transactional(readOnly = true)
-    public List<ExpenseResponse> getExpensesByEmployeeId(Long employeeId) {
+    public List<ExpenseResponse> getExpensesByEmployeeId(Long employeeId) throws DatabaseOperationException {
         log.info("Fetching expenses for employee: {}", employeeId);
 
-        List<EmployeeExpense> expenses = expenseRepository.findByEmployeeIdAndIsActiveTrue(employeeId);
-        return expenses.stream()
-                .map(this::mapToResponseDto)
-                .collect(Collectors.toList());
+        try {
+            List<EmployeeExpense> expenses = expenseRepository.findByEmployeeIdAndIsActiveTrue(employeeId);
+            return expenses.stream()
+                    .map(this::mapToResponseDto)
+                    .collect(Collectors.toList());
+        } catch (DataAccessException e) {
+            log.error("Database error while fetching expenses for employee {}: {}", employeeId, e.getMessage());
+            throw new DatabaseOperationException("Failed to fetch expenses due to database error", e);
+        } catch (Exception e) {
+            log.error("Unexpected error while fetching expenses for employee {}: {}", employeeId, e.getMessage(), e);
+            throw new DatabaseOperationException("Failed to fetch expenses", e);
+        }
     }
 
     /**
@@ -298,11 +307,11 @@ public class ExpenseServiceImpl implements ExpenseService {
      */
     @Override
     @Transactional(readOnly = true)
-    public ExpenseResponse getExpenseById(Long expenseId) throws ExpenseNotFoundException {
+    public ExpenseResponse getExpenseById(Long expenseId) throws ExpenseNotFoundException, DatabaseOperationException {
         log.info("Fetching expense by ID: {}", expenseId);
 
         if (expenseId == null || expenseId <= 0) {
-            throw new IllegalArgumentException("Invalid expense ID");
+            throw new IllegalArgumentException(constants.INVALID_EMPLOYEE_ID);
         }
 
         try {
@@ -314,10 +323,10 @@ public class ExpenseServiceImpl implements ExpenseService {
             throw e;
         } catch (DataAccessException e) {
             log.error("Database error while fetching expense {}: {}", expenseId, e.getMessage());
-            throw new RuntimeException("Failed to fetch expense due to database error", e);
+            throw new DatabaseOperationException("Failed to fetch expense due to database error", e);
         } catch (Exception e) {
             log.error("Unexpected error while fetching expense {}: {}", expenseId, e.getMessage(), e);
-            throw new RuntimeException("Failed to fetch expense", e);
+            throw new DatabaseOperationException("Failed to fetch expense", e);
         }
     }
 
@@ -350,10 +359,10 @@ public class ExpenseServiceImpl implements ExpenseService {
      * Validates spending limits against category limits
      */
     private void validateSpendingLimit(ExpenseCategory category, BigDecimal amountInr, Long employeeId) throws BusinessRuleViolationException {
-        if (category.getSpendingLimit() != null && amountInr.compareTo(category.getSpendingLimit()) > 0) {
+        if (category.getMaxLimit() != null && amountInr.compareTo(category.getMaxLimit()) > 0) {
             throw new BusinessRuleViolationException(
                 String.format("Amount %.2f exceeds category spending limit of %.2f", 
-                    amountInr, category.getSpendingLimit()));
+                    amountInr, category.getMaxLimit()));
         }
     }
 

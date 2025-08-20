@@ -10,6 +10,7 @@ import com.expense.service.exception.GlobalExceptionHandler.CurrencyConversionEx
 import com.expense.service.exception.GlobalExceptionHandler.ExpenseCategoryNotFoundException;
 import com.expense.service.exception.GlobalExceptionHandler.InvalidExpenseStatusException;
 import com.expense.service.exception.GlobalExceptionHandler.BusinessRuleViolationException;
+import com.expense.service.exception.GlobalExceptionHandler.DatabaseOperationException;
 
 import java.util.List;
 
@@ -27,12 +28,12 @@ public interface ExpenseService {
      * @throws CurrencyConversionException if currency conversion fails
      * @throws BusinessRuleViolationException if business rules are violated
      */
-    ExpenseResponse createExpense(ExpenseRequest expenseRequestDto) throws ExpenseCategoryNotFoundException, CurrencyConversionException, BusinessRuleViolationException;
+    ExpenseResponse createExpense(ExpenseRequest expenseRequestDto) throws ExpenseCategoryNotFoundException, CurrencyConversionException, BusinessRuleViolationException, DatabaseOperationException;
 
     /**
      * Update an existing expense (employee perspective)
      * @param expenseId Expense ID to update
-     * @param expenseRequestDto Updated expense data
+    // * @param expenseRequestDto Updated expense data
      * @param employeeId Employee ID for authorization
      * @return Updated expense details
      * @throws ExpenseNotFoundException if expense is not found
@@ -75,7 +76,7 @@ public interface ExpenseService {
      * @param employeeId Employee ID
      * @return List of employee expenses
      */
-    List<ExpenseResponse> getExpensesByEmployeeId(Long employeeId);
+    List<ExpenseResponse> getExpensesByEmployeeId(Long employeeId) throws DatabaseOperationException;
 
     /**
      * Get expense by ID
@@ -83,5 +84,5 @@ public interface ExpenseService {
      * @return Expense details
      * @throws ExpenseNotFoundException if expense is not found
      */
-    ExpenseResponse getExpenseById(Long expenseId) throws ExpenseNotFoundException;
+    ExpenseResponse getExpenseById(Long expenseId) throws ExpenseNotFoundException, DatabaseOperationException;
 }

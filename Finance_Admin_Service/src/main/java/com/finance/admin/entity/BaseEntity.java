@@ -60,10 +60,10 @@ public abstract class BaseEntity {
     @PrePersist
     protected void onCreate() {
         if (createdBy == null) {
-            createdBy = "SYSTEM";
+            createdBy = com.finance.admin.util.Constants.SYSTEM_USER;
         }
         if (updatedBy == null) {
-            updatedBy = "SYSTEM";
+            updatedBy = com.finance.admin.util.Constants.SYSTEM_USER;
         }
     }
 
@@ -73,7 +73,7 @@ public abstract class BaseEntity {
     @PreUpdate
     protected void onUpdate() {
         if (updatedBy == null) {
-            updatedBy = "SYSTEM";
+            updatedBy = com.finance.admin.util.Constants.SYSTEM_USER;
         }
     }
 }

@@ -2,6 +2,7 @@ package com.finance.admin.service.impl;
 
 import com.finance.admin.dto.*;
 import com.finance.admin.entity.ExpenseStatus;
+import com.finance.admin.exception.EmailException;
 import com.finance.admin.exception.GlobalExceptionHandler.BusinessException;
 import com.finance.admin.exception.GlobalExceptionHandler.ResourceNotFoundException;
 import com.finance.admin.repository.EmployeeRepository;
@@ -103,7 +104,13 @@ public class ExpenseServiceImpl implements ExpenseService {
             Expense expenseDto = modelMapper.map(savedExpense, Expense.class);
             
             // Send approval notification email asynchronously
-            emailService.sendApprovalNotification(expenseDto);
+            try {
+                emailService.sendApprovalNotification(expenseDto);
+            } catch (EmailException e) {
+                log.warn("Failed to send approval notification for expense {}: {}", 
+                        expense.getExpenseId(), e.getMessage());
+                // Continue processing as email failure shouldn't fail the approval
+            }
             
             log.info("Expense approved successfully: {}", expense.getExpenseId());
             return expenseDto;
@@ -143,7 +150,13 @@ public class ExpenseServiceImpl implements ExpenseService {
             Expense expenseDto = modelMapper.map(savedExpense, Expense.class);
             
             // Send rejection notification email asynchronously
-            emailService.sendRejectionNotification(expenseDto);
+            try {
+                emailService.sendRejectionNotification(expenseDto);
+            } catch (EmailException e) {
+                log.warn("Failed to send rejection notification for expense {}: {}", 
+                        expense.getExpenseId(), e.getMessage());
+                // Continue processing as email failure shouldn't fail the rejection
+            }
             
             log.info("Expense rejected successfully: {}", expense.getExpenseId());
             return expenseDto;
@@ -305,7 +318,7 @@ public class ExpenseServiceImpl implements ExpenseService {
      */
     private void convertAmountToInr(com.finance.admin.entity.Expense expense) {
         try {
-            if (!"INR".equals(expense.getCurrency())) {
+            if (!com.finance.admin.util.Constants.CURRENCY_INR.equals(expense.getCurrency())) {
                 BigDecimal exchangeRate = currencyService.getExchangeRateToInr(expense.getCurrency());
                 BigDecimal amountInr = expense.getAmount().multiply(exchangeRate);
                 

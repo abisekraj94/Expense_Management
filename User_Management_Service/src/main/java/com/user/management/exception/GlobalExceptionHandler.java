@@ -97,6 +97,32 @@ public class GlobalExceptionHandler {
 
 
     /**
+     * Handle microservice communication exceptions
+     * 
+     * @param ex the MicroserviceCommunicationException
+     * @return structured error response
+     */
+    @ExceptionHandler(MicroserviceCommunicationException.class)
+    public ResponseEntity<ApiResponse<Object>> handleMicroserviceCommunicationException(MicroserviceCommunicationException ex) {
+        log.error("Microservice communication failed: {}", ex.getMessage(), ex);
+        ApiResponse<Object> response = ApiResponse.error("Failed to communicate with external service: " + ex.getMessage());
+        return new ResponseEntity<>(response, HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    /**
+     * Handle service integration exceptions
+     * 
+     * @param ex the ServiceIntegrationException
+     * @return structured error response
+     */
+    @ExceptionHandler(ServiceIntegrationException.class)
+    public ResponseEntity<ApiResponse<Object>> handleServiceIntegrationException(ServiceIntegrationException ex) {
+        log.error("Service integration failed: {}", ex.getMessage(), ex);
+        ApiResponse<Object> response = ApiResponse.error("Service integration error: " + ex.getMessage());
+        return new ResponseEntity<>(response, HttpStatus.BAD_GATEWAY);
+    }
+
+    /**
      * Handle all other exceptions
      * 
      * @param ex the Exception

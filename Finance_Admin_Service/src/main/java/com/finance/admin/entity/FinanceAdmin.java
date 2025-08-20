@@ -69,7 +69,7 @@ public class FinanceAdmin extends BaseEntity {
     @Size(max = 50, message = "${validation.role.max.length}")
     @Column(name = "role", length = 50)
     @Builder.Default
-    private String role = "FINANCE_ADMIN";
+    private String role = com.finance.admin.util.Constants.ROLE_FINANCE_ADMIN;
 
     /**
      * Whether the admin account is active

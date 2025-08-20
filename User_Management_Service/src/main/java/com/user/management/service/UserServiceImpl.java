@@ -14,6 +14,7 @@ import com.user.management.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +38,10 @@ public class UserServiceImpl implements UserService {
     private final JwtUtil jwtUtil;
     private final ModelMapper modelMapper;
     private final ApplicationConstants constants;
+    private final MicroserviceIntegrationService microserviceIntegrationService;
+    
+    @Value("${microservice.registration.notification.failed}")
+    private String registrationNotificationFailed;
 
     /**
      * Register a new user in the system
@@ -81,6 +86,15 @@ public class UserServiceImpl implements UserService {
             // Map to response DTO
             UserProfileResponse response = modelMapper.map(savedUser, UserProfileResponse.class);
             response.setRole(savedUser.getUserRole().getRoleName());
+
+            // Notify microservices asynchronously
+            try {
+                String tempToken = jwtUtil.generateToken(savedUser.getEmail(), savedUser.getUserRole().getRoleName());
+                microserviceIntegrationService.notifyEmployeeExpenseService(response, tempToken);
+                microserviceIntegrationService.notifyFinanceAdminService(response, tempToken);
+            } catch (MicroserviceCommunicationException e) {
+                log.warn(registrationNotificationFailed, savedUser.getEmail(), e);
+            }
 
             return response;
         } catch (RuntimeException e) {

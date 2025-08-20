@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Application constants for User Management Service
- * Contains all values loaded from properties file
+ * Contains only the values that are actually used in the application
  * 
  * @author User Management Team
  * @version 1.0.0
@@ -13,14 +13,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class ApplicationConstants {
 
-    // User Roles
+    // User Roles - Used in DataInitializer
     @Value("${user.role.employee}")
     public String ROLE_EMPLOYEE;
     
     @Value("${user.role.finance.admin}")
     public String ROLE_FINANCE_ADMIN;
 
-    // JWT Constants
+    // JWT Constants - Used in JwtUtil and JwtAuthenticationFilter
     @Value("${jwt.token.prefix}")
     public String JWT_TOKEN_PREFIX;
     
@@ -33,17 +33,7 @@ public class ApplicationConstants {
     @Value("${jwt.token.validity}")
     public long JWT_TOKEN_VALIDITY;
 
-    // API Endpoints
-    @Value("${api.base.path}")
-    public String API_BASE_PATH;
-    
-    @Value("${api.auth.endpoint}")
-    public String AUTH_ENDPOINT;
-    
-    @Value("${api.user.endpoint}")
-    public String USER_ENDPOINT;
-
-    // Error Messages
+    // Error Messages - Used in Controllers and GlobalExceptionHandler
     @Value("${error.user.not.found}")
     public String USER_NOT_FOUND;
     
@@ -53,13 +43,10 @@ public class ApplicationConstants {
     @Value("${error.email.already.exists}")
     public String EMAIL_ALREADY_EXISTS;
     
-    @Value("${error.invalid.token}")
-    public String INVALID_TOKEN;
-    
     @Value("${error.access.denied}")
     public String ACCESS_DENIED;
 
-    // Success Messages
+    // Success Messages - Used in Controllers
     @Value("${success.user.registered}")
     public String USER_REGISTERED_SUCCESSFULLY;
     
@@ -69,65 +56,11 @@ public class ApplicationConstants {
     @Value("${success.profile.updated}")
     public String PROFILE_UPDATED_SUCCESSFULLY;
 
-    // Validation Messages
-    @Value("${validation.email.required}")
-    public String EMAIL_REQUIRED;
-    
-    @Value("${validation.password.required}")
-    public String PASSWORD_REQUIRED;
-    
-    @Value("${validation.name.required}")
-    public String NAME_REQUIRED;
-    
-    @Value("${validation.department.required}")
-    public String DEPARTMENT_REQUIRED;
-    
-    @Value("${validation.role.required}")
-    public String ROLE_REQUIRED;
-    
-    @Value("${validation.email.format}")
-    public String INVALID_EMAIL_FORMAT;
-
-    // Database Constants
-    @Value("${db.table.user.role}")
-    public String USER_ROLE_TABLE;
-    
-    @Value("${db.table.user.mgnt}")
-    public String USER_MGNT_TABLE;
-    
-    @Value("${db.created.by.system}")
-    public String CREATED_BY_SYSTEM;
-    
-    @Value("${db.updated.by.system}")
-    public String UPDATED_BY_SYSTEM;
-
-    // HTTP Status Messages
-    @Value("${status.success}")
-    public String SUCCESS;
-    
-    @Value("${status.error}")
-    public String ERROR;
-    
+    // HTTP Status Messages - Used in GlobalExceptionHandler
     @Value("${status.validation.failed}")
     public String VALIDATION_FAILED;
 
-    // Extended Validation Messages
-    @Value("${validation.name.size}")
-    public String NAME_SIZE_MESSAGE;
-    
-    @Value("${validation.email.size}")
-    public String EMAIL_SIZE_MESSAGE;
-    
-    @Value("${validation.password.size}")
-    public String PASSWORD_SIZE_MESSAGE;
-    
-    @Value("${validation.department.size}")
-    public String DEPARTMENT_SIZE_MESSAGE;
-    
-    @Value("${validation.role.pattern}")
-    public String ROLE_PATTERN_MESSAGE;
-
-    // Application Messages
+    // Application Messages - Used in Controllers
     @Value("${app.message.logout.success}")
     public String LOGOUT_SUCCESS;
     
@@ -143,6 +76,7 @@ public class ApplicationConstants {
     @Value("${app.message.profile.retrieved}")
     public String PROFILE_RETRIEVED;
     
+    // Entity Descriptions - Used in DataInitializer
     @Value("${entity.role.employee.description}")
     public String EMPLOYEE_ROLE_DESCRIPTION;
     

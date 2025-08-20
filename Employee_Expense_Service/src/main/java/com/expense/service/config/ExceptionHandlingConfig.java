@@ -1,5 +1,6 @@
 package com.expense.service.config;
 
+import com.expense.service.exception.GlobalExceptionHandler.ExternalServiceException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,18 +21,6 @@ import java.time.Duration;
 public class ExceptionHandlingConfig {
 
     /**
-     * Configures RestTemplate with timeout and error handling
-     */
-/*    @Bean
-    public RestTemplate restTemplate(RestTemplateBuilder builder) {
-        return builder
-                .setConnectTimeout(Duration.ofSeconds(5))
-                .setReadTimeout(Duration.ofSeconds(10))
-                .errorHandler(new CustomResponseErrorHandler())
-                .build();
-    }*/
-
-    /**
      * Custom error handler for RestTemplate
      */
     private static class CustomResponseErrorHandler implements ResponseErrorHandler {
@@ -47,19 +36,23 @@ public class ExceptionHandlingConfig {
             HttpStatus statusCode = (HttpStatus) response.getStatusCode();
             log.error("External API error: {} - {}", statusCode, response.getStatusText());
             
-            switch (statusCode) {
-                case NOT_FOUND:
-                    throw new RuntimeException("External service endpoint not found");
-                case UNAUTHORIZED:
-                    throw new RuntimeException("External service authentication failed");
-                case TOO_MANY_REQUESTS:
-                    throw new RuntimeException("External service rate limit exceeded");
-                case INTERNAL_SERVER_ERROR:
-                    throw new RuntimeException("External service internal error");
-                case SERVICE_UNAVAILABLE:
-                    throw new RuntimeException("External service unavailable");
-                default:
-                    throw new RuntimeException("External service error: " + statusCode);
+            try {
+                switch (statusCode) {
+                    case NOT_FOUND:
+                        throw new ExternalServiceException("External service endpoint not found");
+                    case UNAUTHORIZED:
+                        throw new ExternalServiceException("External service authentication failed");
+                    case TOO_MANY_REQUESTS:
+                        throw new ExternalServiceException("External service rate limit exceeded");
+                    case INTERNAL_SERVER_ERROR:
+                        throw new ExternalServiceException("External service internal error");
+                    case SERVICE_UNAVAILABLE:
+                        throw new ExternalServiceException("External service unavailable");
+                    default:
+                        throw new ExternalServiceException("External service error: " + statusCode);
+                }
+            } catch (ExternalServiceException e) {
+                throw new RuntimeException(e.getMessage(), e);
             }
         }
     }

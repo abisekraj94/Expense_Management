@@ -40,6 +40,12 @@ currency:
     url: https://open.er-api.com/v6/latest
     timeout: 5000
 
+# User Management Service Configuration
+user:
+  management:
+    service:
+      url: http://localhost:8080
+
 # Logging Configuration
 logging:
   level:

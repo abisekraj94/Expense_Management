@@ -16,14 +16,8 @@ import lombok.*;
 @Builder
 public class ApprovalRequest {
 
-    /**
-     * Expense ID to approve
-     */
     @NotNull(message = "${validation.expense.id.required}")
     private Long expenseId;
 
-    /**
-     * Admin performing the approval
-     */
     private String approvedBy;
 }
