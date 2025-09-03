@@ -1,0 +1,117 @@
+{
+  "info": {
+    "name": "Employee Expense Management API",
+    "description": "Complete API collection for Employee Expense Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "your-jwt-token-here",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Submit Expense",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"empId\": 1,\n  \"expenseCategoryId\": 1,\n  \"description\": \"Business travel to client site\",\n  \"amount\": 500.00,\n  \"currency\": \"USD\",\n  \"expenseDate\": \"2024-01-15\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/expenses",
+          "host": ["{{base_url}}"],
+          "path": ["expenses"]
+        }
+      }
+    },
+    {
+      "name": "Get Employee Expenses",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/expenses/employee/1?page=0&size=10",
+          "host": ["{{base_url}}"],
+          "path": ["expenses", "employee", "1"],
+          "query": [
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "size",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Approve Expense",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"approverId\": 6,\n  \"action\": \"APPROVED\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/admin/expenses/1/approve",
+          "host": ["{{base_url}}"],
+          "path": ["admin", "expenses", "1", "approve"]
+        }
+      }
+    },
+    {
+      "name": "Get Pending Expenses",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/admin/expenses/pending",
+          "host": ["{{base_url}}"],
+          "path": ["admin", "expenses", "pending"]
+        }
+      }
+    },
+    {
+      "name": "Employee Report",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/reports/employee/1",
+          "host": ["{{base_url}}"],
+          "path": ["reports", "employee", "1"]
+        }
+      }
+    }
+  ]
+}
